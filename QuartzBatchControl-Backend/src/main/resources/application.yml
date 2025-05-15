@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/batchcontrol_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: batchcontrol_dev
+    password: 1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+jwt:
+  secret: batch-control-jwt-secret-key-256-bits-long-1234567890abcdefghijklmnopqrstuvwxyz
+  token-validity-in-seconds: 86400 
