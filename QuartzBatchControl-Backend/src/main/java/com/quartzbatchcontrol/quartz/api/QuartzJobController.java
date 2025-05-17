@@ -50,15 +50,15 @@ public class QuartzJobController {
                                                          @RequestParam String jobGroup,
                                                          @AuthenticationPrincipal UserPrincipal userPrincipal) {
         quartzJobService.pauseJob(jobName, jobGroup, userPrincipal.getUsername());
-        return ResponseEntity.ok(ApiResponse.success("일시정지 했습니다."));
+        return ResponseEntity.ok(ApiResponse.success("일시 정지 했습니다."));
     }
 
     @PutMapping("/resume")
     public ResponseEntity<ApiResponse<String>> resumeJob(@RequestParam String jobName,
                                                         @RequestParam String jobGroup,
                                                         @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        quartzJobService.pauseJob(jobName, jobGroup, userPrincipal.getUsername());
-        return ResponseEntity.ok(ApiResponse.success("재시작을 했습니다."));
+        quartzJobService.resumeJob(jobName, jobGroup, userPrincipal.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("다시 활성화되었습니다."));
     }
 
     @PutMapping("/trigger")
@@ -66,6 +66,6 @@ public class QuartzJobController {
                                                         @RequestParam String jobGroup,
                                                         @AuthenticationPrincipal UserPrincipal userPrincipal) {
         quartzJobService.triggerJobNow(jobName, jobGroup, userPrincipal.getUsername());
-        return ResponseEntity.ok(ApiResponse.success("즉시수행을 완료 했습니다."));
+        return ResponseEntity.ok(ApiResponse.success("즉시 수행을 완료 했습니다."));
     }
 }

@@ -1,6 +1,7 @@
 package com.quartzbatchcontrol.quartz.domain;
 
 import com.quartzbatchcontrol.quartz.enums.QuartzJobEventType;
+import com.quartzbatchcontrol.quartz.enums.QuartzJobType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,6 +25,10 @@ public class QuartzJobHistory {
 
     @Column(name = "job_group", nullable = false)
     private String jobGroup;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "job_type", nullable = false)
+    private QuartzJobType jobType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false)

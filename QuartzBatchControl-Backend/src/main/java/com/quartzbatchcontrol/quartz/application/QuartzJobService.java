@@ -4,6 +4,7 @@ import com.quartzbatchcontrol.global.exception.BusinessException;
 import com.quartzbatchcontrol.global.exception.ErrorCode;
 import com.quartzbatchcontrol.quartz.api.request.QuartzJobRequest;
 import com.quartzbatchcontrol.quartz.enums.QuartzJobEventType;
+import com.quartzbatchcontrol.quartz.enums.QuartzJobType;
 import com.quartzbatchcontrol.quartz.job.QuartzBatchExecutor;
 import lombok.RequiredArgsConstructor;
 import org.quartz.*;
@@ -75,6 +76,7 @@ public class QuartzJobService {
         quartzJobHistoryService.saveHistory(
                 request.getJobName(),
                 request.getJobGroup(),
+                request.getJobType(),
                 QuartzJobEventType.REGISTER,
                 request.getCronExpression(),
                 userName
@@ -95,6 +97,7 @@ public class QuartzJobService {
             quartzJobHistoryService.saveHistory(
                     request.getJobName(),
                     request.getJobGroup(),
+                    request.getJobType(),
                     QuartzJobEventType.UPDATE,
                     request.getCronExpression(),
                     userName
@@ -111,12 +114,14 @@ public class QuartzJobService {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
             }
+            QuartzJobType jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
 
             scheduler.deleteJob(jobKey);
 
             quartzJobHistoryService.saveHistory(
                     jobName,
                     jobGroup,
+                    jobType,
                     QuartzJobEventType.DELETE,
                     null,
                     userName
@@ -132,10 +137,12 @@ public class QuartzJobService {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
             }
+            QuartzJobType jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
+
             scheduler.pauseJob(jobKey);
 
             quartzJobHistoryService.saveHistory(
-                    jobName, jobGroup, QuartzJobEventType.PAUSE, null, userName
+                    jobName, jobGroup, jobType, QuartzJobEventType.PAUSE, null, userName
             );
         } catch (SchedulerException e) {
             throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
@@ -148,10 +155,12 @@ public class QuartzJobService {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
             }
+            QuartzJobType jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
+
             scheduler.resumeJob(jobKey);
 
             quartzJobHistoryService.saveHistory(
-                    jobName, jobGroup, QuartzJobEventType.RESUME, null, userName
+                    jobName, jobGroup, jobType, QuartzJobEventType.RESUME, null, userName
             );
         } catch (SchedulerException e) {
             throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
@@ -164,11 +173,12 @@ public class QuartzJobService {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
             }
+            QuartzJobType jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
 
             scheduler.triggerJob(jobKey);
 
             quartzJobHistoryService.saveHistory(
-                    jobName, jobGroup, QuartzJobEventType.TRIGGER_NOW, null, userName
+                    jobName, jobGroup, jobType, QuartzJobEventType.TRIGGER_NOW, null, userName
             );
         } catch (SchedulerException e) {
             throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);

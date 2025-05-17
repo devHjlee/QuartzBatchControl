@@ -1,7 +1,10 @@
 package com.quartzbatchcontrol.quartz.application;
 
+import com.quartzbatchcontrol.global.exception.BusinessException;
+import com.quartzbatchcontrol.global.exception.ErrorCode;
 import com.quartzbatchcontrol.quartz.domain.QuartzJobHistory;
 import com.quartzbatchcontrol.quartz.enums.QuartzJobEventType;
+import com.quartzbatchcontrol.quartz.enums.QuartzJobType;
 import com.quartzbatchcontrol.quartz.infrastructure.QuartzJobHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,7 @@ public class QuartzJobHistoryService {
 
     public void saveHistory(String jobName,
                             String jobGroup,
+                            QuartzJobType jobType,
                             QuartzJobEventType eventType,
                             String cronExpression,
                             String createdBy) {
@@ -23,6 +27,7 @@ public class QuartzJobHistoryService {
         QuartzJobHistory history = QuartzJobHistory.builder()
                 .jobName(jobName)
                 .jobGroup(jobGroup)
+                .jobType(jobType)
                 .eventType(eventType)
                 .cronExpression(cronExpression)
                 .createdBy(createdBy)
@@ -30,5 +35,12 @@ public class QuartzJobHistoryService {
                 .build();
 
         historyRepository.save(history);
+    }
+
+    public QuartzJobType getJobType(String jobName, String jobGroup) {
+    return historyRepository
+            .findFirstByJobNameAndJobGroupAndEventTypeOrderByCreatedAtDesc(jobName, jobGroup, QuartzJobEventType.REGISTER)
+            .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND))
+            .getJobType();
     }
 }
