@@ -55,7 +55,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import api from '@/api/axios'
 import { useAuthStore } from '@/stores/auth'
 
 const email = ref('')
@@ -66,16 +66,19 @@ const authStore = useAuthStore()
 
 const handleLogin = async () => {
   loading.value = true
-
   try {
-    const response = await axios.post('/api/login', {
+    const response = await api.post('/auth/login', {
       email: email.value,
       password: password.value,
     })
-
-    const token = response.data.token
-    authStore.login(token)
-    router.push('/dashboard')
+    console.log(response);
+    if (response.data && response.data.data.accessToken) {
+      authStore.login(response.data.data.accessToken)
+      router.push('/dashboard')
+    } else {
+      alert('로그인 응답에 토큰이 없습니다. 백엔드 응답 구조를 확인하세요.')
+      console.error('로그인 응답:', response.data)
+    }
   } catch (error: any) {
     alert('로그인 실패: 아이디 또는 비밀번호를 확인하세요.')
     console.error('로그인 오류:', error)

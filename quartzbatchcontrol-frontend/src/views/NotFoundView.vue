@@ -1,5 +1,8 @@
 <template>
-  <div>404 Not Found</div>
+  <div class="container mt-5">
+    <h2>404 Not Found</h2>
+    <p>페이지를 찾을 수 없습니다.</p>
+  </div>
 </template>
 
 <script setup>
