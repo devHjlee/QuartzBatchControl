@@ -1,16 +1,17 @@
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
-const api = axios.create({
-  baseURL: '/api',
+const instance = axios.create({
+  baseURL: '/',
 })
 
-api.interceptors.request.use((config) => {
+instance.interceptors.request.use(config => {
   const authStore = useAuthStore()
-  if (authStore.token) {
-    config.headers.Authorization = `Bearer ${authStore.token}`
+  const token = authStore.token
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
 
-export default api 
+export default instance
