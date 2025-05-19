@@ -2,8 +2,7 @@ package com.quartzbatchcontrol.quartz.infrastructure;
 
 import com.quartzbatchcontrol.quartz.api.response.QuartzJobList;
 import com.quartzbatchcontrol.quartz.domain.QQuartzCronTriggerView;
-
-import com.quartzbatchcontrol.quartz.domain.QQuartzJobMeta;
+import com.quartzbatchcontrol.quartz.domain.QQuartzJobHistory;
 import com.quartzbatchcontrol.quartz.domain.QQuartzTriggerView;
 import com.quartzbatchcontrol.quartz.enums.QuartzJobEventType;
 
@@ -25,7 +24,7 @@ public class QuartzJobQueryRepository {
     public List<QuartzJobList> findQuartzJobs() {
         QQuartzTriggerView trigger = QQuartzTriggerView.quartzTriggerView;
         QQuartzCronTriggerView cron = QQuartzCronTriggerView.quartzCronTriggerView;
-        QQuartzJobMeta meta = QQuartzJobMeta.quartzJobMeta;
+        QQuartzJobHistory history = QQuartzJobHistory.quartzJobHistory;
 
         return queryFactory
                 .select(Projections.constructor(
@@ -36,26 +35,26 @@ public class QuartzJobQueryRepository {
                         cron.cronExpression,
                         trigger.nextFireTime,
                         trigger.previousFireTime,
-                        meta.jobType,
-                        meta.eventType,
-                        meta.createdBy
+                        history.jobType,
+                        history.eventType,
+                        history.createdBy
                 ))
                 .from(trigger)
                 .leftJoin(cron).on(
                         trigger.triggerName.eq(cron.triggerName),
                         trigger.triggerGroup.eq(cron.triggerGroup)
                 )
-                .leftJoin(meta).on(
-                        meta.jobName.eq(trigger.jobName),
-                        meta.jobGroup.eq(trigger.jobGroup),
-                        meta.eventType.eq(QuartzJobEventType.REGISTER),
-                        meta.createdAt.eq(
-                                select(meta.createdAt.max())
-                                        .from(meta)
+                .leftJoin(history).on(
+                        history.jobName.eq(trigger.jobName),
+                        history.jobGroup.eq(trigger.jobGroup),
+                        history.eventType.eq(QuartzJobEventType.REGISTER),
+                        history.createdAt.eq(
+                                select(history.createdAt.max())
+                                        .from(history)
                                         .where(
-                                                meta.jobName.eq(trigger.jobName),
-                                                meta.jobGroup.eq(trigger.jobGroup),
-                                                meta.eventType.eq(QuartzJobEventType.REGISTER)
+                                                history.jobName.eq(trigger.jobName),
+                                                history.jobGroup.eq(trigger.jobGroup),
+                                                history.eventType.eq(QuartzJobEventType.REGISTER)
                                         )
                         )
                 )

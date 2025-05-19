@@ -3,16 +3,12 @@ package com.quartzbatchcontrol.quartz.application;
 import com.quartzbatchcontrol.global.exception.BusinessException;
 import com.quartzbatchcontrol.global.exception.ErrorCode;
 import com.quartzbatchcontrol.quartz.api.request.QuartzJobRequest;
-import com.quartzbatchcontrol.quartz.domain.QuartzJobMeta;
 import com.quartzbatchcontrol.quartz.enums.QuartzJobEventType;
 import com.quartzbatchcontrol.quartz.enums.QuartzJobType;
-import com.quartzbatchcontrol.quartz.infrastructure.QuartzJobMetaRepository;
 import com.quartzbatchcontrol.quartz.job.QuartzBatchExecutor;
 import lombok.RequiredArgsConstructor;
 import org.quartz.*;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
 
 import static com.quartzbatchcontrol.quartz.enums.QuartzJobType.*;
 
@@ -21,7 +17,7 @@ import static com.quartzbatchcontrol.quartz.enums.QuartzJobType.*;
 public class QuartzJobService {
 
     private final Scheduler scheduler;
-    private final QuartzJobMetaRepository quartzJobMetaRepository;
+    private final QuartzJobHistoryService quartzJobHistoryService;
 
     /**
      * 공통 Job 등록
@@ -77,7 +73,7 @@ public class QuartzJobService {
     public void createJob(QuartzJobRequest request, String userName) {
         scheduleJob(request);
 
-        saveQuartzJobMeta(
+        quartzJobHistoryService.saveHistory(
                 request.getJobName(),
                 request.getJobGroup(),
                 request.getJobType(),
@@ -98,7 +94,7 @@ public class QuartzJobService {
             scheduler.deleteJob(jobKey);
             scheduleJob(request);
 
-            saveQuartzJobMeta(
+            quartzJobHistoryService.saveHistory(
                     request.getJobName(),
                     request.getJobGroup(),
                     request.getJobType(),
@@ -118,11 +114,11 @@ public class QuartzJobService {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
             }
-            QuartzJobType jobType = getJobType(jobName, jobGroup);
+            QuartzJobType jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
 
             scheduler.deleteJob(jobKey);
 
-            saveQuartzJobMeta(
+            quartzJobHistoryService.saveHistory(
                     jobName,
                     jobGroup,
                     jobType,
@@ -141,11 +137,11 @@ public class QuartzJobService {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
             }
-            QuartzJobType jobType = getJobType(jobName, jobGroup);
+            QuartzJobType jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
 
             scheduler.pauseJob(jobKey);
 
-            saveQuartzJobMeta(
+            quartzJobHistoryService.saveHistory(
                     jobName, jobGroup, jobType, QuartzJobEventType.PAUSE, null, userName
             );
         } catch (SchedulerException e) {
@@ -159,11 +155,11 @@ public class QuartzJobService {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
             }
-            QuartzJobType jobType = getJobType(jobName, jobGroup);
+            QuartzJobType jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
 
             scheduler.resumeJob(jobKey);
 
-            saveQuartzJobMeta(
+            quartzJobHistoryService.saveHistory(
                     jobName, jobGroup, jobType, QuartzJobEventType.RESUME, null, userName
             );
         } catch (SchedulerException e) {
@@ -177,42 +173,15 @@ public class QuartzJobService {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
             }
-            QuartzJobType jobType = getJobType(jobName, jobGroup);
+            QuartzJobType jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
 
             scheduler.triggerJob(jobKey);
 
-            saveQuartzJobMeta(
+            quartzJobHistoryService.saveHistory(
                     jobName, jobGroup, jobType, QuartzJobEventType.TRIGGER_NOW, null, userName
             );
         } catch (SchedulerException e) {
             throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
         }
-    }
-
-    public void saveQuartzJobMeta(String jobName,
-                            String jobGroup,
-                            QuartzJobType jobType,
-                            QuartzJobEventType eventType,
-                            String cronExpression,
-                            String createdBy) {
-
-        QuartzJobMeta quartzJobMeta = QuartzJobMeta.builder()
-                .jobName(jobName)
-                .jobGroup(jobGroup)
-                .jobType(jobType)
-                .eventType(eventType)
-                .cronExpression(cronExpression)
-                .createdBy(createdBy)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        quartzJobMetaRepository.save(quartzJobMeta);
-    }
-
-    public QuartzJobType getJobType(String jobName, String jobGroup) {
-        return quartzJobMetaRepository
-                .findFirstByJobNameAndJobGroupAndEventTypeOrderByCreatedAtDesc(jobName, jobGroup, QuartzJobEventType.REGISTER)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND))
-                .getJobType();
     }
 }
