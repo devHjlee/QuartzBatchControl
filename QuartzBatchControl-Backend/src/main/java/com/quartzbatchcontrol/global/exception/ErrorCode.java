@@ -40,7 +40,7 @@ public enum ErrorCode {
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청값이 유효하지 않습니다."),
     ILLEGAL_ARGUMENT(HttpStatus.BAD_REQUEST, "잘못된 인자입니다."),
     QUARTZ_SCHEDULING_FAILED(HttpStatus.BAD_REQUEST, "Job 스케줄링 중 오류가 발생했습니다."),
-    INVALID_JOB_CLASS(HttpStatus.BAD_REQUEST, "존재하지 않는 Quartz Job 클래스입니다."),
+    INVALID_JOB_CLASS(HttpStatus.BAD_REQUEST, "존재하지 않는 Job 입니다."),
     INVALID_CRON_EXPRESSION(HttpStatus.BAD_REQUEST, "잘못된 Cron 표현식입니다.");
 
     private final HttpStatus httpStatus;
