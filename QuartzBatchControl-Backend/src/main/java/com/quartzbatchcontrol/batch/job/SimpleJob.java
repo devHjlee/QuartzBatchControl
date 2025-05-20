@@ -17,7 +17,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 public class SimpleJob {
     // 1. Job 정의
-    @Bean(name = "simpleBatchJob")
+    @Bean(name = "simpleBatchJobConfig")
     public Job simpleBatchJob(JobRepository jobRepository,
                          Step simpleStepOne,
                          Step simpleStepTwo) {

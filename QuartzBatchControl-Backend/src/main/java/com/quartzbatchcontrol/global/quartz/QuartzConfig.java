@@ -7,6 +7,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.scheduling.quartz.SpringBeanJobFactory;
 
@@ -23,6 +24,7 @@ public class QuartzConfig {
     }
 
     @Bean
+    @Primary
     public SchedulerFactoryBean schedulerFactoryBean(
             DataSource dataSource,
             SpringBeanJobFactory jobFactory,

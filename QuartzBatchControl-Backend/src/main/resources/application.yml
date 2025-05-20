@@ -14,9 +14,12 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
 
   quartz:
+    auto-startup: true
     job-store-type: jdbc
     jdbc:
-      initialize-schema: never  # 직접 SQL 실행했기 때문에 never로 설정
+      initialize-schema: never
+    wait-for-jobs-to-complete-on-shutdown: true
+    overwrite-existing-jobs: true
     properties:
       org:
         quartz:
