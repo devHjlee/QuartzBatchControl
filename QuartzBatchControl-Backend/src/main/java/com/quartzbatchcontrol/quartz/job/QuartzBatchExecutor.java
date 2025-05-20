@@ -1,6 +1,5 @@
 package com.quartzbatchcontrol.quartz.job;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 import org.quartz.JobExecutionException;
@@ -8,15 +7,21 @@ import org.springframework.batch.core.*;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.configuration.JobRegistry;
 import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Slf4j
-@RequiredArgsConstructor
 @Component
 public class QuartzBatchExecutor implements org.quartz.Job {
 
-    private final JobLauncher jobLauncher;
-    private final JobRegistry jobRegistry;
+    @Autowired
+    private JobLauncher jobLauncher;
+    
+    @Autowired
+    private JobRegistry jobRegistry;
+
+    public QuartzBatchExecutor() {
+    }
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
