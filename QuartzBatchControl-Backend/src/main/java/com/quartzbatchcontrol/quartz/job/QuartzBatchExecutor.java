@@ -27,7 +27,7 @@ public class QuartzBatchExecutor implements org.quartz.Job {
     public void execute(JobExecutionContext context) throws JobExecutionException {
         try {
             JobDataMap map = context.getMergedJobDataMap();
-            String batchJobName = map.getString("batchJobName");
+            String batchJobName = map.getString("metaId");
 
             JobParametersBuilder builder = new JobParametersBuilder()
                     .addLong("timestamp", System.currentTimeMillis());
