@@ -24,5 +24,5 @@ public class BatchJobMetaRequest {
     private String jobDescription;
 
     // ex: {"date":"2025-01-01", "type":"daily", "isActive": true, "threshold": 100.5}
-    private Map<String, Object> defaultParams;
+    private Map<String, Object> jobParameters;
 }

@@ -3,10 +3,9 @@ package com.quartzbatchcontrol.batch.application;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quartzbatchcontrol.batch.api.request.BatchJobMetaRequest;
-import com.quartzbatchcontrol.batch.api.response.BatchJobListResponse;
 import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
 import com.quartzbatchcontrol.batch.infrastructure.BatchJobMetaRepository;
-import com.quartzbatchcontrol.batch.infrastructure.BatchJobQueryRepository;
+
 import com.quartzbatchcontrol.global.exception.BusinessException;
 import com.quartzbatchcontrol.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -17,13 +16,16 @@ import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.configuration.JobRegistry;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.NoSuchJobException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 
+import com.quartzbatchcontrol.batch.api.response.BatchJobParameterResponse;
+import com.quartzbatchcontrol.batch.api.response.BatchJobMetaSummaryResponse;
 
 @Slf4j
 @Service
@@ -32,10 +34,10 @@ public class BatchJobService {
     private final JobLauncher jobLauncher;
     private final JobRegistry jobRegistry;
     private final BatchJobMetaRepository batchJobMetaRepository;
-    private final BatchJobQueryRepository batchJobQueryRepository;
     private final ObjectMapper objectMapper;
 
-    public void createBatchJob(BatchJobMetaRequest request, String userName) {
+    @Transactional
+    public void saveBatchJob(BatchJobMetaRequest request, String userName) {
         if (batchJobMetaRepository.existsByJobNameAndMetaName(request.getJobName(), request.getMetaName())) {
             throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
         }
@@ -48,7 +50,7 @@ public class BatchJobService {
                     .jobName(request.getJobName())
                     .metaName(request.getMetaName())
                     .jobDescription(request.getJobDescription())
-                    .defaultParams(serializeParams(request.getDefaultParams()))
+                    .jobParameters(serializeParams(request.getJobParameters()))
                     .createdBy(userName)
                     .createdAt(LocalDateTime.now())
                     .updatedBy(userName)
@@ -71,9 +73,9 @@ public class BatchJobService {
         }
 
         try {
-            String serializedParams = request.getDefaultParams() != null ?
-                    serializeParams(request.getDefaultParams()) :
-                    batchJobMeta.getDefaultParams();
+            String serializedParams = request.getJobParameters() != null ?
+                    serializeParams(request.getJobParameters()) :
+                    batchJobMeta.getJobParameters();
 
             batchJobMeta.update(
                     request.getJobDescription(),
@@ -100,8 +102,18 @@ public class BatchJobService {
         }
     }
 
-    public List<BatchJobListResponse> getBatchJobs(String jobName) {
-        return batchJobQueryRepository.findBatchJobsWithSummary();
+    @Transactional(readOnly = true)
+    public Page<BatchJobMetaSummaryResponse> getAllBatchJobMetas(String jobName, String metaName, Pageable pageable) {
+        Page<BatchJobMeta> batchJobMetas = batchJobMetaRepository.findBySearchCondition(jobName, metaName, pageable);
+        return batchJobMetas.map(BatchJobMetaSummaryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public BatchJobParameterResponse getJobParameters(Long metaId) {
+        BatchJobMeta batchJobMeta = batchJobMetaRepository.findById(metaId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND,
+                        "BatchJobMeta not found with id: " + metaId));
+        return BatchJobParameterResponse.from(batchJobMeta);
     }
 
     private boolean isValidJob(String jobName) {
@@ -109,7 +121,7 @@ public class BatchJobService {
             jobRegistry.getJob(jobName);
             return true;
         } catch (NoSuchJobException e) {
-            throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);
+            throw new BusinessException(ErrorCode.INVALID_JOB_CLASS, e);
         }
     }
 
@@ -135,7 +147,9 @@ public class BatchJobService {
         JobParametersBuilder builder = new JobParametersBuilder()
                 .addLong("timestamp", System.currentTimeMillis());
 
-        Map<String, Object> params = deserializeParams(batchJobMeta.getDefaultParams());
+        builder.addLong("metaId", batchJobMeta.getId());
+
+        Map<String, Object> params = deserializeParams(batchJobMeta.getJobParameters());
         if (params != null) {
             params.forEach((key, value) -> {
                 if (value instanceof String) {

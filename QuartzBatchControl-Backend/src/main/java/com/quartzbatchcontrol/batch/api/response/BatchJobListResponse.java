@@ -12,7 +12,7 @@ public class BatchJobListResponse {
     private final Long id;
     private final String jobName;
     private final String jobDescription;
-    private final String defaultParameters;
+    private final String jobParameters;
     private final LocalDateTime lastExecutedAt;
     private final String lastStatus;
     private final String lastFailureMessage;

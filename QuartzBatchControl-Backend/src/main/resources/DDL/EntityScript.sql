@@ -3,12 +3,25 @@ CREATE TABLE batch_job_meta (
                                 job_name VARCHAR(255) NOT NULL,
                                 meta_name VARCHAR(255) NOT NULL,
                                 job_description VARCHAR(500),
-                                default_params TEXT,
+                                job_parameters TEXT,
                                 created_by VARCHAR(100) NOT NULL,
                                 created_at DATETIME NOT NULL,
                                 updated_by VARCHAR(100) NOT NULL,
                                 updated_at DATETIME NOT NULL
 );
+
+CREATE TABLE batch_job_execution_log (
+                               id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                               job_execution_id BIGINT,
+                               job_name VARCHAR(255) NOT NULL,
+                               meta_id BIGINT NOT NULL,
+                               start_time DATETIME NOT NULL,
+                               end_time DATETIME DEFAULT NULL,
+                               status VARCHAR(255) NOT NULL,
+                               exit_code VARCHAR(255) DEFAULT NULL,
+                               exit_message VARCHAR(255) DEFAULT NULL,
+                               job_parameters TEXT DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE quartz_job_history (
                                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
