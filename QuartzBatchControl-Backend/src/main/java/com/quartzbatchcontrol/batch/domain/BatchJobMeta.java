@@ -1,5 +1,6 @@
 package com.quartzbatchcontrol.batch.domain;
 
+import com.quartzbatchcontrol.batch.api.request.BatchJobMetaRequest;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,6 +20,9 @@ public class BatchJobMeta {
     @Column(name = "job_name", nullable = false)
     private String jobName;
 
+    @Column(name = "meta_name", nullable = false)
+    private String metaName;
+
     @Column(name = "job_description")
     private String jobDescription;
 
@@ -36,4 +40,11 @@ public class BatchJobMeta {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public void update(String jobDescription, String defaultParams, String updatedBy) {
+        this.jobDescription = jobDescription;
+        this.defaultParams = defaultParams;
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+    }
 }

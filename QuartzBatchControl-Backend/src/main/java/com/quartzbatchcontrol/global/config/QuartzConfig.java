@@ -1,4 +1,4 @@
-package com.quartzbatchcontrol.global.quartz;
+package com.quartzbatchcontrol.global.config;
 
 import com.quartzbatchcontrol.quartz.listener.JobsListener;
 import org.quartz.spi.TriggerFiredBundle;

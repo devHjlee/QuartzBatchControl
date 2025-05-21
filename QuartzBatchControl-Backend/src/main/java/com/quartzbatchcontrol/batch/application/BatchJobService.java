@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quartzbatchcontrol.batch.api.request.BatchJobMetaRequest;
 import com.quartzbatchcontrol.batch.api.response.BatchJobListResponse;
-import com.quartzbatchcontrol.batch.api.response.BatchJobMetaResponse;
 import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
 import com.quartzbatchcontrol.batch.infrastructure.BatchJobMetaRepository;
 import com.quartzbatchcontrol.batch.infrastructure.BatchJobQueryRepository;
@@ -15,20 +14,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.configuration.JobRegistry;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.NoSuchJobException;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+
 
 @Slf4j
 @Service
@@ -38,41 +33,70 @@ public class BatchJobService {
     private final JobRegistry jobRegistry;
     private final BatchJobMetaRepository batchJobMetaRepository;
     private final BatchJobQueryRepository batchJobQueryRepository;
+    private final ObjectMapper objectMapper;
 
     public void createBatchJob(BatchJobMetaRequest request, String userName) {
-        if (isValidJob(request.getJobName())) {
+        if (batchJobMetaRepository.existsByJobNameAndMetaName(request.getJobName(), request.getMetaName())) {
+            throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
+        }
+        if (!isValidJob(request.getJobName())) {
+            throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);
+        }
+
+        try {
             batchJobMetaRepository.save(BatchJobMeta.builder()
-                            .jobName(request.getJobName())
-                            .jobDescription(request.getJobDescription())
-                            .defaultParams(toJson(request.getDefaultParams()))
-                            .createdBy(userName)
-                            .createdAt(LocalDateTime.now())
-                            .updatedBy(userName)
-                            .updatedAt(LocalDateTime.now())
-                            .build());
+                    .jobName(request.getJobName())
+                    .metaName(request.getMetaName())
+                    .jobDescription(request.getJobDescription())
+                    .defaultParams(serializeParams(request.getDefaultParams()))
+                    .createdBy(userName)
+                    .createdAt(LocalDateTime.now())
+                    .updatedBy(userName)
+                    .updatedAt(LocalDateTime.now())
+                    .build());
+        } catch (Exception e) {
+            log.error("배치 작업 생성 중 오류 발생: {}", e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 
-    public void runBatchJob(Long id, String userName) {
+    @Transactional
+    public void updateBatchJob(BatchJobMetaRequest request, String userName) {
+        BatchJobMeta batchJobMeta = batchJobMetaRepository.findById(request.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        // 작업 존재 여부 검증
+        if (!isValidJob(batchJobMeta.getJobName())) {
+            throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);
+        }
+
+        try {
+            String serializedParams = request.getDefaultParams() != null ?
+                    serializeParams(request.getDefaultParams()) :
+                    batchJobMeta.getDefaultParams();
+
+            batchJobMeta.update(
+                    request.getJobDescription(),
+                    serializedParams,
+                    userName
+            );
+
+        } catch (Exception e) {
+            log.error("배치 작업 업데이트 중 오류 발생: {}", e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public void executeBatchJob(Long id, String userName) {
         BatchJobMeta batchJobMeta = batchJobMetaRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
         try {
             Job job = jobRegistry.getJob(batchJobMeta.getJobName());
-
-            JobParametersBuilder builder = new JobParametersBuilder()
-                    .addLong("timestamp", System.currentTimeMillis()); // 유니크 보장
-
-            Map<String, String> params = toMap(batchJobMeta.getDefaultParams());
-
-            if (params != null) {
-                params.forEach(builder::addString);
-            }
-
-            JobParameters jobParameters = builder.toJobParameters();
+            JobParameters jobParameters = createJobParameters(batchJobMeta);
             jobLauncher.run(job, jobParameters);
-
         } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, e);
+            log.error("배치 작업 실행 중 오류 발생: {}", e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -89,20 +113,52 @@ public class BatchJobService {
         }
     }
 
-    private String toJson(Map<String, String> map) {
+    private String serializeParams(Map<String, Object> params) {
         try {
-            return new ObjectMapper().writeValueAsString(map);
+            return objectMapper.writeValueAsString(params);
         } catch (Exception e) {
-            throw new RuntimeException("파라미터 직렬화 실패", e);
+            log.error("파라미터 직렬화 실패: {}", e.getMessage(), e);
+            throw new BusinessException(ErrorCode.TYPE_MISMATCH);
         }
     }
 
-    private Map<String, String> toMap(String json) {
+    private Map<String, Object> deserializeParams(String json) {
         try {
-            return new ObjectMapper().readValue(json, new TypeReference<>() {});
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
-            throw new RuntimeException("파라미터 역직렬화 실패", e);
+            log.error("파라미터 역직렬화 실패: {}", e.getMessage(), e);
+            throw new BusinessException(ErrorCode.TYPE_MISMATCH);
         }
     }
 
+    private JobParameters createJobParameters(BatchJobMeta batchJobMeta) {
+        JobParametersBuilder builder = new JobParametersBuilder()
+                .addLong("timestamp", System.currentTimeMillis());
+
+        Map<String, Object> params = deserializeParams(batchJobMeta.getDefaultParams());
+        if (params != null) {
+            params.forEach((key, value) -> {
+                if (value instanceof String) {
+                    builder.addString(key, (String) value);
+                } else if (value instanceof Long) {
+                    builder.addLong(key, (Long) value);
+                } else if (value instanceof Integer) {
+                    builder.addLong(key, ((Integer) value).longValue());
+                } else if (value instanceof Double) {
+                    builder.addDouble(key, (Double) value);
+                } else if (value instanceof Boolean) {
+                    builder.addString(key, value.toString());
+                } else {
+                    try {
+                        builder.addString(key, objectMapper.writeValueAsString(value));
+                    } catch (Exception e) {
+                        log.error("파라미터 변환 실패: {}", e.getMessage(), e);
+                        throw new BusinessException(ErrorCode.TYPE_MISMATCH);
+                    }
+                }
+            });
+        }
+
+        return builder.toJobParameters();
+    }
 }

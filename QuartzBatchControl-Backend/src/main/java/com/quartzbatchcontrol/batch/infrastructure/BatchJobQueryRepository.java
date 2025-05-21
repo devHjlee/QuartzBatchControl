@@ -4,18 +4,15 @@ import com.quartzbatchcontrol.batch.api.response.BatchJobListResponse;
 import com.quartzbatchcontrol.batch.domain.QBatchJobExecutionView;
 import com.quartzbatchcontrol.batch.domain.QBatchJobInstanceView;
 import com.quartzbatchcontrol.batch.domain.QBatchJobMeta;
-import com.querydsl.core.Tuple;
+
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.JPAExpressions;
-import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-
-import static com.querydsl.jpa.JPAExpressions.select;
 
 @Repository
 @RequiredArgsConstructor
@@ -43,6 +40,7 @@ public class BatchJobQueryRepository {
                         // 메타
                         meta.id,
                         meta.jobName,
+                        meta.metaName,
                         meta.jobDescription,
                         meta.defaultParams,
 

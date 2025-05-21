@@ -29,12 +29,22 @@ public class BatchJobController {
         return ResponseEntity.ok(ApiResponse.success("Batch 등록을 완료 했습니다."));
     }
 
-    @PostMapping("/run")
-    public ResponseEntity<ApiResponse<String>> runBatchJob(
+    @PutMapping
+    public ResponseEntity<ApiResponse<String>> updateBatchJob(
             @RequestBody BatchJobMetaRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        batchJobService.runBatchJob(request.getId(), userPrincipal.getUsername());
+        batchJobService.updateBatchJob(request, userPrincipal.getUsername());
+
+        return ResponseEntity.ok(ApiResponse.success("Batch 수정을 완료 했습니다."));
+    }
+
+    @PostMapping("/execute")
+    public ResponseEntity<ApiResponse<String>> executeBatchJob(
+            @RequestBody BatchJobMetaRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        batchJobService.executeBatchJob(request.getId(), userPrincipal.getUsername());
 
         return ResponseEntity.ok(ApiResponse.success("Batch Job 수행을 완료 했습니다."));
     }
