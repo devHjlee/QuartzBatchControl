@@ -104,8 +104,7 @@ public class BatchJobService {
 
     @Transactional(readOnly = true)
     public Page<BatchJobMetaSummaryResponse> getAllBatchJobMetas(String jobName, String metaName, Pageable pageable) {
-        Page<BatchJobMeta> batchJobMetas = batchJobMetaRepository.findBySearchCondition(jobName, metaName, pageable);
-        return batchJobMetas.map(BatchJobMetaSummaryResponse::from);
+        return batchJobMetaRepository.findBySearchCondition(jobName, metaName, pageable);
     }
 
     @Transactional(readOnly = true)

@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -52,12 +53,12 @@ public class BatchJobController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<BatchJobMetaSummaryResponse>>> getAllBatchJobMetas(
+    public ResponseEntity<ApiResponse<PagedModel<BatchJobMetaSummaryResponse>>> getAllBatchJobMetas(
             @RequestParam(required = false) String jobName,
             @RequestParam(required = false) String metaName,
             Pageable pageable) {
         Page<BatchJobMetaSummaryResponse> jobMetas = batchJobService.getAllBatchJobMetas(jobName, metaName, pageable);
-        return ResponseEntity.ok(ApiResponse.success(jobMetas, "배치 작업 메타데이터 목록 조회를 완료했습니다."));
+        return ResponseEntity.ok(ApiResponse.success(new PagedModel<>(jobMetas), "배치 작업 메타데이터 목록 조회를 완료했습니다."));
     }
 
     @GetMapping("/{metaId}")

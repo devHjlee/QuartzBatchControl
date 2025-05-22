@@ -1,8 +1,10 @@
 package com.quartzbatchcontrol.batch.infrastructure;
 
+import com.quartzbatchcontrol.batch.api.response.BatchJobMetaSummaryResponse;
 import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
 import com.quartzbatchcontrol.batch.domain.QBatchJobMeta;
 import com.quartzbatchcontrol.quartz.domain.QQuartzJobMeta;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +25,20 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
     private final QQuartzJobMeta quartzJobMeta = QQuartzJobMeta.quartzJobMeta;
 
     @Override
-    public Page<BatchJobMeta> findBySearchCondition(String jobName, String metaName, Pageable pageable) {
-        List<BatchJobMeta> content = queryFactory
-                .selectFrom(batchJobMeta)
+    public Page<BatchJobMetaSummaryResponse> findBySearchCondition(String jobName, String metaName, Pageable pageable) {
+        List<BatchJobMetaSummaryResponse> content = queryFactory
+                .select(Projections.constructor(
+                        BatchJobMetaSummaryResponse.class,
+                        batchJobMeta.id,
+                        batchJobMeta.jobName,
+                        batchJobMeta.metaName,
+                        batchJobMeta.createdBy,
+                        batchJobMeta.createdAt,
+                        batchJobMeta.updatedBy,
+                        batchJobMeta.updatedAt,
+                        quartzJobMeta.id.isNotNull()
+                ))
+                .from(batchJobMeta)
                 .leftJoin(quartzJobMeta).on(
                         batchJobMeta.id.eq(quartzJobMeta.metaId)
                 )
@@ -33,7 +46,7 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
                         jobNameContains(jobName),
                         metaNameContains(metaName)
                 )
-                .orderBy(batchJobMeta.createdAt.desc()) // 최근 생성된 순으로 정렬
+                .orderBy(batchJobMeta.createdAt.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
