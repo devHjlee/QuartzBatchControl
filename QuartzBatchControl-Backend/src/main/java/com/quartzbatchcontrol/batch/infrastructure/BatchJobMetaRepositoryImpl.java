@@ -2,6 +2,7 @@ package com.quartzbatchcontrol.batch.infrastructure;
 
 import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
 import com.quartzbatchcontrol.batch.domain.QBatchJobMeta;
+import com.quartzbatchcontrol.quartz.domain.QQuartzJobMeta;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -19,11 +20,15 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
 
     private final JPAQueryFactory queryFactory;
     private final QBatchJobMeta batchJobMeta = QBatchJobMeta.batchJobMeta;
+    private final QQuartzJobMeta quartzJobMeta = QQuartzJobMeta.quartzJobMeta;
 
     @Override
     public Page<BatchJobMeta> findBySearchCondition(String jobName, String metaName, Pageable pageable) {
         List<BatchJobMeta> content = queryFactory
                 .selectFrom(batchJobMeta)
+                .leftJoin(quartzJobMeta).on(
+                        batchJobMeta.id.eq(quartzJobMeta.metaId)
+                )
                 .where(
                         jobNameContains(jobName),
                         metaNameContains(metaName)
