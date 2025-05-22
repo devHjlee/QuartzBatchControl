@@ -16,14 +16,17 @@ public class BatchJobMeta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "meta_name", nullable = false)
+    private String metaName;
+    
     @Column(name = "job_name", nullable = false)
     private String jobName;
 
     @Column(name = "job_description")
     private String jobDescription;
 
-    @Lob
-    private String defaultParams;
+    @Column(columnDefinition = "TEXT")
+    private String jobParameters;
 
     @Column(name = "created_by", nullable = false)
     private String createdBy;
@@ -36,4 +39,11 @@ public class BatchJobMeta {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public void update(String jobDescription, String jobParameters, String updatedBy) {
+        this.jobDescription = jobDescription;
+        this.jobParameters = jobParameters;
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+    }
 }

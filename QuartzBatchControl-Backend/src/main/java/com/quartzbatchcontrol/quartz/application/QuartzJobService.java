@@ -1,9 +1,9 @@
 package com.quartzbatchcontrol.quartz.application;
 
+import com.quartzbatchcontrol.batch.infrastructure.BatchJobMetaRepository;
 import com.quartzbatchcontrol.global.exception.BusinessException;
 import com.quartzbatchcontrol.global.exception.ErrorCode;
 import com.quartzbatchcontrol.quartz.api.request.QuartzJobRequest;
-import com.quartzbatchcontrol.quartz.enums.QuartzJobEventType;
 import com.quartzbatchcontrol.quartz.enums.QuartzJobType;
 import com.quartzbatchcontrol.quartz.job.QuartzBatchExecutor;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,8 @@ import static com.quartzbatchcontrol.quartz.enums.QuartzJobType.*;
 public class QuartzJobService {
 
     private final Scheduler scheduler;
-    private final QuartzJobHistoryService quartzJobHistoryService;
+    private final QuartzJobMetaService quartzJobMetaService;
+    private final BatchJobMetaRepository batchJobMetaRepository;
 
     /**
      * 공통 Job 등록
@@ -30,7 +31,7 @@ public class QuartzJobService {
 
         if (BATCH.equals(request.getJobType())) {
             jobClass = QuartzBatchExecutor.class;
-            dataMap.put("batchJobName", request.getBatchJobName());
+            dataMap.put("metaId", request.getMetaId());
         } else if (SIMPLE.equals(request.getJobType())) {
             try {
                 jobClass = (Class<Job>) Class.forName("com.quartzbatchcontrol.quartz.job." + request.getJobName());
@@ -73,14 +74,15 @@ public class QuartzJobService {
 
     @Transactional
     public void createJob(QuartzJobRequest request, String userName) {
-        quartzJobHistoryService.saveHistory(
-                request.getJobName(),
-                request.getJobGroup(),
-                request.getJobType(),
-                QuartzJobEventType.REGISTER,
-                request.getCronExpression(),
-                userName
-        );
+        if (QuartzJobType.BATCH.equals(request.getJobType())) {
+            if (request.getMetaId() == null) {
+                throw new BusinessException(ErrorCode.MISSING_PARAMETER);
+            }
+            if (!batchJobMetaRepository.existsById(request.getMetaId())) {
+                throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
+            }
+        }
+        quartzJobMetaService.saveQuartzJobMeta(request, userName);
 
         scheduleJob(request);
     }
@@ -93,20 +95,18 @@ public class QuartzJobService {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);
             }
-        } catch (SchedulerException e) {
-            throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
-        }
 
-        quartzJobHistoryService.saveHistory(
-                request.getJobName(),
-                request.getJobGroup(),
-                request.getJobType(),
-                QuartzJobEventType.UPDATE,
-                request.getCronExpression(),
-                userName
-        );
+            if (QuartzJobType.BATCH.equals(request.getJobType())) {
+                if (request.getMetaId() == null) {
+                    throw new BusinessException(ErrorCode.MISSING_PARAMETER, "metaId는 필수입니다.");
+                }
+                if (!batchJobMetaRepository.existsById(request.getMetaId())) {
+                    throw new BusinessException(ErrorCode.INVALID_PARAMETER, "존재하지 않는 metaId입니다.");
+                }
+            }
 
-        try {
+            quartzJobMetaService.updateQuartzJobMeta(request, userName);
+
             scheduler.deleteJob(jobKey);
             scheduleJob(request);
         } catch (SchedulerException e) {
@@ -115,29 +115,15 @@ public class QuartzJobService {
     }
 
     @Transactional
-    public void deleteJob(String jobName, String jobGroup, String userName) {
-        JobKey jobKey = new JobKey(jobName, jobGroup);
-        QuartzJobType jobType;
+    public void deleteJob(QuartzJobRequest request, String userName) {
+        JobKey jobKey = new JobKey(request.getJobName(), request.getJobGroup());
 
         try {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);
             }
-            jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
-        } catch (SchedulerException e) {
-            throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
-        }
+            quartzJobMetaService.deleteQuartzJobMeta(request, userName);
 
-        quartzJobHistoryService.saveHistory(
-                jobName,
-                jobGroup,
-                jobType,
-                QuartzJobEventType.DELETE,
-                null,
-                userName
-        );
-
-        try {
             scheduler.deleteJob(jobKey);
         } catch (SchedulerException e) {
             throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
@@ -145,23 +131,15 @@ public class QuartzJobService {
     }
 
     @Transactional
-    public void pauseJob(String jobName, String jobGroup, String userName) {
-        JobKey jobKey = JobKey.jobKey(jobName, jobGroup);
-        QuartzJobType jobType;
+    public void pauseJob(QuartzJobRequest request, String userName) {
+        JobKey jobKey = new JobKey(request.getJobName(), request.getJobGroup());
+
         try {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);
             }
-            jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
-        } catch (SchedulerException e) {
-            throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
-        }
+            quartzJobMetaService.updateQuartzJobMeta(request, userName);
 
-        quartzJobHistoryService.saveHistory(
-                jobName, jobGroup, jobType, QuartzJobEventType.PAUSE, null, userName
-        );
-
-        try {
             scheduler.pauseJob(jobKey);
         } catch (SchedulerException e) {
             throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
@@ -169,23 +147,15 @@ public class QuartzJobService {
     }
 
     @Transactional
-    public void resumeJob(String jobName, String jobGroup, String userName) {
-        JobKey jobKey = JobKey.jobKey(jobName, jobGroup);
-        QuartzJobType jobType;
+    public void resumeJob(QuartzJobRequest request, String userName) {
+        JobKey jobKey = new JobKey(request.getJobName(), request.getJobGroup());
+
         try {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);
             }
-            jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
-        } catch (SchedulerException e) {
-            throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
-        }
+            quartzJobMetaService.updateQuartzJobMeta(request, userName);
 
-        quartzJobHistoryService.saveHistory(
-                jobName, jobGroup, jobType, QuartzJobEventType.RESUME, null, userName
-        );
-
-        try {
             scheduler.resumeJob(jobKey);
         } catch (SchedulerException e) {
             throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
@@ -193,23 +163,15 @@ public class QuartzJobService {
     }
 
     @Transactional
-    public void triggerJobNow(String jobName, String jobGroup, String userName) {
-        JobKey jobKey = JobKey.jobKey(jobName, jobGroup);
-        QuartzJobType jobType;
+    public void triggerJobNow(QuartzJobRequest request, String userName) {
+        JobKey jobKey = new JobKey(request.getJobName(), request.getJobGroup());
+
         try {
             if (!scheduler.checkExists(jobKey)) {
                 throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);
             }
-            jobType = quartzJobHistoryService.getJobType(jobName, jobGroup);
-        } catch (SchedulerException e) {
-            throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);
-        }
+            quartzJobMetaService.updateQuartzJobMeta(request, userName);
 
-        quartzJobHistoryService.saveHistory(
-                jobName, jobGroup, jobType, QuartzJobEventType.TRIGGER_NOW, null, userName
-        );
-
-        try {
             scheduler.triggerJob(jobKey);
         } catch (SchedulerException e) {
             throw new BusinessException(ErrorCode.QUARTZ_SCHEDULING_FAILED, e);

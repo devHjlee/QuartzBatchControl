@@ -1,6 +1,7 @@
 package com.quartzbatchcontrol.quartz.api.request;
 
 import com.quartzbatchcontrol.quartz.enums.MisfirePolicy;
+import com.quartzbatchcontrol.quartz.enums.QuartzJobEventType;
 import com.quartzbatchcontrol.quartz.enums.QuartzJobType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -14,6 +15,9 @@ import org.quartz.JobDataMap;
 @AllArgsConstructor
 public class QuartzJobRequest {
 
+    private Long id;
+    private Long metaId;
+
     @NotBlank(message = "잡 이름은 필수입니다.")
     private String jobName;
 
@@ -26,11 +30,10 @@ public class QuartzJobRequest {
     @NotNull(message = "잡 타입은 필수입니다.")
     private QuartzJobType jobType;
 
-    // BATCH 타입일 때만 사용 → 별도 조건 검증 필요 (커스텀 Validator 또는 서비스 로직)
-    private String batchJobName;
-
     @NotNull(message = "Misfire 정책은 필수입니다.")
     private MisfirePolicy misfirePolicy;
 
     private JobDataMap parameters;
+
+    private QuartzJobEventType eventType;
 }

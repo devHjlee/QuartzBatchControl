@@ -1,5 +1,7 @@
 package com.quartzbatchcontrol.batch.job;
 
+import com.quartzbatchcontrol.batch.listener.BatchJobExecutionListener;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -15,7 +17,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 @Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class SimpleJob {
+    private final BatchJobExecutionListener batchJobExecutionListener;
     // 1. Job 정의
     @Bean(name = "simpleBatchJobConfig")
     public Job simpleBatchJob(JobRepository jobRepository,
@@ -24,6 +28,7 @@ public class SimpleJob {
         return new JobBuilder("simpleBatchJob", jobRepository)
                 .start(simpleStepOne)
                 .next(simpleStepTwo)
+                .listener(batchJobExecutionListener)
                 .build();
     }
 
@@ -37,6 +42,7 @@ public class SimpleJob {
         return new StepBuilder("simpleStepOne", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
                     log.info(">>>>> [STEP 1] param1: {}, param2: {}", param1, param2);
+                    Thread.sleep(5000);
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
                 .build();
