@@ -12,13 +12,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class QuartzJobList {
+    private QuartzJobType jobType;
+    private QuartzJobEventType eventType;
+    private String metaName;
+    private String metaId;
     private String jobName;
     private String jobGroup;
     private String state;
     private String cronExpression;
     private Long nextFireTime;
     private Long previousFireTime;
-    private QuartzJobType jobType;
-    private QuartzJobEventType eventType;
+
     private String createdBy;
 }

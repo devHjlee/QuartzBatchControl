@@ -1,6 +1,7 @@
 package com.quartzbatchcontrol.quartz.api.request;
 
 import com.quartzbatchcontrol.quartz.enums.MisfirePolicy;
+import com.quartzbatchcontrol.quartz.enums.QuartzJobEventType;
 import com.quartzbatchcontrol.quartz.enums.QuartzJobType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -33,4 +34,6 @@ public class QuartzJobRequest {
     private MisfirePolicy misfirePolicy;
 
     private JobDataMap parameters;
+
+    private QuartzJobEventType eventType;
 }

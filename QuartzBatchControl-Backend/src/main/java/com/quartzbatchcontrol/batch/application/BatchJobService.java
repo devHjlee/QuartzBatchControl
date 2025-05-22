@@ -39,7 +39,7 @@ public class BatchJobService {
     @Transactional
     public void saveBatchJob(BatchJobMetaRequest request, String userName) {
         if (batchJobMetaRepository.existsByJobNameAndMetaName(request.getJobName(), request.getMetaName())) {
-            throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL); //todo 코드추가필요
         }
         if (!isValidJob(request.getJobName())) {
             throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);

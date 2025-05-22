@@ -21,6 +21,9 @@ public class QuartzJobMetaService {
 
     @Transactional
     public void saveQuartzJobMeta(QuartzJobRequest request, String userName) {
+        if (quartzJobMetaRepository.existsByJobName(request.getJobName())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL); //todo 에러코드 변경필요
+        }
 
         QuartzJobMeta history = QuartzJobMeta.builder()
                 .jobName(request.getJobName())
@@ -35,13 +38,18 @@ public class QuartzJobMetaService {
     }
 
     public void updateQuartzJobMeta(QuartzJobRequest request, String userName) {
-        quartzJobMetaRepository.findById(request.get)
+        quartzJobMetaRepository.findById(request.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND))
+                .update(request.getEventType(), request.getCronExpression(), request.getMetaId(), userName);
+
     }
 
-    public QuartzJobType getJobType(String jobName, String jobGroup) {
-    return quartzJobMetaRepository
-            .findFirstByJobNameAndJobGroupAndEventTypeOrderByCreatedAtDesc(jobName, jobGroup, QuartzJobEventType.REGISTER)
-            .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND))
-            .getJobType();
+    // todo 삭제이력은?
+    public void deleteQuartzJobMeta(QuartzJobRequest request, String userName) {
+        QuartzJobMeta quartzJobMeta = quartzJobMetaRepository.findById(request.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+        quartzJobMetaRepository.delete(quartzJobMeta);
+
+
     }
 }

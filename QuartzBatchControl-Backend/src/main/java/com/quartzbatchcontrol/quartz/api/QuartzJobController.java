@@ -37,35 +37,31 @@ public class QuartzJobController {
         return ResponseEntity.ok(ApiResponse.success("Job 수정을 완료 했습니다."));
     }
 
-    @DeleteMapping
-    public ResponseEntity<ApiResponse<String>> deleteJob(@RequestParam String jobName,
-                                                       @RequestParam String jobGroup,
-                                                       @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        quartzJobService.deleteJob(jobName, jobGroup, userPrincipal.getUsername());
+    @PostMapping("/delete")
+    public ResponseEntity<ApiResponse<String>> deleteJob(@Valid @RequestBody QuartzJobRequest request,
+                                                         @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        quartzJobService.deleteJob(request, userPrincipal.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Job 삭제를 완료 했습니다."));
     }
 
-    @PutMapping("/pause")
-    public ResponseEntity<ApiResponse<String>> pauseJob(@RequestParam String jobName,
-                                                         @RequestParam String jobGroup,
-                                                         @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        quartzJobService.pauseJob(jobName, jobGroup, userPrincipal.getUsername());
+    @PostMapping("/pause")
+    public ResponseEntity<ApiResponse<String>> pauseJob(@Valid @RequestBody QuartzJobRequest request,
+                                                        @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        quartzJobService.pauseJob(request, userPrincipal.getUsername());
         return ResponseEntity.ok(ApiResponse.success("일시 정지 했습니다."));
     }
 
-    @PutMapping("/resume")
-    public ResponseEntity<ApiResponse<String>> resumeJob(@RequestParam String jobName,
-                                                        @RequestParam String jobGroup,
-                                                        @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        quartzJobService.resumeJob(jobName, jobGroup, userPrincipal.getUsername());
+    @PostMapping("/resume")
+    public ResponseEntity<ApiResponse<String>> resumeJob(@Valid @RequestBody QuartzJobRequest request,
+                                                         @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        quartzJobService.resumeJob(request, userPrincipal.getUsername());
         return ResponseEntity.ok(ApiResponse.success("다시 활성화되었습니다."));
     }
 
-    @PutMapping("/trigger")
-    public ResponseEntity<ApiResponse<String>> triggerJobNow(@RequestParam String jobName,
-                                                        @RequestParam String jobGroup,
-                                                        @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        quartzJobService.triggerJobNow(jobName, jobGroup, userPrincipal.getUsername());
+    @PostMapping("/trigger")
+    public ResponseEntity<ApiResponse<String>> triggerJobNow(@Valid @RequestBody QuartzJobRequest request,
+                                                             @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        quartzJobService.triggerJobNow(request, userPrincipal.getUsername());
         return ResponseEntity.ok(ApiResponse.success("즉시 수행을 완료 했습니다."));
     }
 }

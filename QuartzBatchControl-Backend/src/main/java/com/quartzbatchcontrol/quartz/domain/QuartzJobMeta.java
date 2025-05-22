@@ -8,7 +8,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "quartz_job_meta_history")
+@Table(name = "quartz_job_meta")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class QuartzJobMeta {
@@ -60,6 +60,8 @@ public class QuartzJobMeta {
         this.cronExpression = cronExpression;
         this.createdBy = createdBy;
         this.createdAt = LocalDateTime.now();
+        this.updatedBy = createdBy;
+        this.updatedAt = LocalDateTime.now();
     }
 
     public void update(QuartzJobEventType eventType, String cronExpression, Long metaId, String userName) {
