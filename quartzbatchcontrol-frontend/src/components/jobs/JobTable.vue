@@ -1,55 +1,53 @@
 <template>
   <div>
-    <!-- 🔍 검색 필드 -->
-    <div class="mb-3 d-flex gap-2">
-      <input v-model="search.jobName" class="form-control w-auto" placeholder="Job Name" />
-      <input v-model="search.jobGroup" class="form-control w-auto" placeholder="Job Group" />
-      <button class="btn btn-primary" @click="fetchJobs">검색</button>
-    </div>
-
-    <div class="table-responsive">
-      <table class="table table-bordered align-middle text-center" width="100%" cellspacing="0">
-        <thead>
-          <tr>
-            <th class="col-1 col-md-1 col-lg-1">Job Name</th>
-            <th class="col-1 col-md-1 col-lg-1">Group</th>
-            <th class="col-1 col-md-1 col-lg-1">Status</th>
-            <th>Cron</th>
-            <th>Next Run</th>
-            <th>Last Run</th>
-            <th class="col-1 col-md-1 col-lg-1">Type</th>
-            <th class="col-1 col-md-1 col-lg-1">Event</th>
-            <th>Created By</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="job in jobs" :key="job.jobName + job.jobGroup">
-            <td class="col-1 col-md-1 col-lg-1">{{ job.jobName }}</td>
-            <td class="col-1 col-md-1 col-lg-1">{{ job.jobGroup }}</td>
-            <td class="col-1 col-md-1 col-lg-1">{{ job.state }}</td>
-            <td>{{ job.cronExpression }}</td>
-            <td>{{ formatTime(job.nextFireTime) }}</td>
-            <td>{{ formatTime(job.previousFireTime) }}</td>
-            <td class="col-1 col-md-1 col-lg-1">{{ job.jobType }}</td>
-            <td class="col-1 col-md-1 col-lg-1">{{ job.eventType }}</td>
-            <td>{{ job.createdBy }}</td>
-            <td>
-              <button class="btn btn-sm btn-info me-1" @click="handleEdit(job)">수정</button>
-              <button class="btn btn-sm btn-danger me-1" @click="handleDelete(job)">삭제</button>
-              <button class="btn btn-sm btn-secondary" @click="handleToggleState(job)">
-                {{ job.state === 'PAUSED' ? '시작' : '일시정지' }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <table id="jobTable" class="display" style="width: 100%">
+      <thead>
+      <tr>
+        <th>Job Name</th>
+        <th>Group</th>
+        <th>Status</th>
+        <th>Cron</th>
+        <th>Next Run</th>
+        <th>Last Run</th>
+        <th>Type</th>
+        <th>Event</th>
+        <th>Created By</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody>
+      <template v-if="jobs.length > 0">
+        <tr v-for="job in jobs" :key="job.jobName + job.jobGroup">
+          <td>{{ job.jobName }}</td>
+          <td>{{ job.jobGroup }}</td>
+          <td>{{ job.state }}</td>
+          <td>{{ job.cronExpression }}</td>
+          <td>{{ formatTime(job.nextFireTime) }}</td>
+          <td>{{ formatTime(job.previousFireTime) }}</td>
+          <td>{{ job.jobType }}</td>
+          <td>{{ job.eventType }}</td>
+          <td>{{ job.createdBy }}</td>
+          <td>
+            <button class="btn btn-sm btn-info me-1" @click="handleEdit(job)">수정</button>
+            <button class="btn btn-sm btn-danger me-1" @click="handleDelete(job)">삭제</button>
+            <button class="btn btn-sm btn-secondary" @click="handleToggleState(job)">
+              {{ job.state === 'PAUSED' ? '시작' : '일시정지' }}
+            </button>
+          </td>
+        </tr>
+      </template>
+      <template v-else>
+        <tr>
+          <td colspan="10">조회된 데이터가 없습니다.</td>
+        </tr>
+      </template>
+      </tbody>
+    </table>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, nextTick } from 'vue'
 import axios from '@/api/axios'
 
 interface JobInfo {
@@ -65,57 +63,66 @@ interface JobInfo {
 }
 
 const jobs = ref<JobInfo[]>([])
-const search = ref({
-  jobName: '',
-  jobGroup: '',
-})
+const dataTable = ref<any>(null)
 
 const formatTime = (time: number): string => {
   if (!time) return '-'
-  const date = new Date(time)
-  return date.toLocaleString()
+  return new Date(time).toLocaleString()
 }
 
 const fetchJobs = async () => {
   try {
-    const response = await axios.get('/api/quartz-jobs', {
-      params: {
-        jobName: search.value.jobName,
-        jobGroup: search.value.jobGroup,
+    const response = await axios.get('/quartz-jobs')
+    jobs.value = response.data.data
+
+    await nextTick()
+
+    if (dataTable.value) {
+      dataTable.value.clear().destroy()
+    }
+
+    dataTable.value = $('#jobTable').DataTable({
+      paging: true,
+      searching: true,
+      info: true,
+      language: {
+        emptyTable: '조회된 데이터가 없습니다.',
+        lengthMenu: '_MENU_개씩 보기',
+        zeroRecords: '검색 결과가 없습니다.',
+        info: '총 _TOTAL_건 중 _START_~_END_',
+        paginate: {
+          first: '처음',
+          last: '마지막',
+          next: '다음',
+          previous: '이전',
+        },
       },
     })
-    jobs.value = response.data.data
   } catch (err) {
     console.error('잡 조회 실패', err)
   }
 }
 
 const handleEdit = (job: JobInfo) => {
-  alert(`✏️ 수정 기능: ${job.jobName} / ${job.jobGroup}`)
-  // router.push(`/jobs/${job.jobName}/edit`) 도 가능
+  alert(`수정: ${job.jobName} / ${job.jobGroup}`)
 }
 
 const handleDelete = async (job: JobInfo) => {
-  const confirmDelete = confirm(`${job.jobName} 잡을 삭제하시겠습니까?`)
-  if (!confirmDelete) return
+  if (!confirm(`정말로 삭제하시겠습니까? ${job.jobName}`)) return
   try {
-    await axios.delete('/api/quartz-jobs', {
-      data: {
-        jobName: job.jobName,
-        jobGroup: job.jobGroup,
-      },
+    await axios.delete('/quartz-jobs', {
+      data: { jobName: job.jobName, jobGroup: job.jobGroup },
     })
     await fetchJobs()
-    alert('삭제 완료')
   } catch (err) {
     console.error('삭제 실패', err)
   }
 }
 
 const handleToggleState = async (job: JobInfo) => {
-  const targetState = job.state === 'PAUSED' ? 'RESUME' : 'PAUSE'
+  const target = job.state === 'PAUSED' ? 'RESUME' : 'PAUSE'
   try {
-    await axios.put(`/api/quartz-jobs/${targetState.toLowerCase()}`, {
+    await axios.put(`/quartz-jobs/${target.toLowerCase()}`, {
       jobName: job.jobName,
       jobGroup: job.jobGroup,
     })
@@ -127,5 +134,3 @@ const handleToggleState = async (job: JobInfo) => {
 
 onMounted(fetchJobs)
 </script>
-
-<style scoped></style>

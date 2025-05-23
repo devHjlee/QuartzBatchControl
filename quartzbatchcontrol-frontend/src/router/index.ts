@@ -5,12 +5,14 @@ import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 import JobView from '@/views/JobView.vue'
+import BatchView from '@/views/BatchView.vue'
 
 const routes = [
   { path: '/', redirect: '/dashboard' },
   { path: '/login', name: 'Login', component: LoginView },
   { path: '/dashboard', name: 'Dashboard', component: DashboardView, meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundView },
+  { path: '/batch', name: 'Batch', component: BatchView, meta: { requiresAuth: true } },
   { path: '/job', name: 'Job', component: JobView, meta: { requiresAuth: true } },
 ]
 
