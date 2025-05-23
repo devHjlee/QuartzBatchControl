@@ -42,7 +42,7 @@
 
     <li class="nav-item">
       <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseQuartz" aria-expanded="true" aria-controls="collapseQuartz">
-        <i class="fas fa-fw fa-cog"></i>
+        <i class="fas fa-calendar fa-2x"></i>
         <span>Quartz</span>
       </a>
       <div id="collapseQuartz" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
