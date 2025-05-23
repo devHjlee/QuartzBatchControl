@@ -32,6 +32,8 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
                         batchJobMeta.id,
                         batchJobMeta.jobName,
                         batchJobMeta.metaName,
+                        batchJobMeta.jobDescription,
+                        batchJobMeta.jobParameters.isNotNull(),
                         batchJobMeta.createdBy,
                         batchJobMeta.createdAt,
                         batchJobMeta.updatedBy,

@@ -11,13 +11,13 @@
           <table id="batchMetaTable" class="table table-bordered" width="100%" cellspacing="0">
             <thead>
               <tr>
-                <th>Batch Job</th>
-                <th>Meta Name</th>
-                <th>Description</th>
-                <th>Quartz 연동</th>
-                <th>Created By</th>
-                <th>Created At</th>
-<!--                <th>Actions</th>-->
+                <th class="center-text">Batch Job</th>
+                <th class="center-text">Meta Name</th>
+                <th class="center-text">Description</th>
+                <th class="center-text">Parameters</th>
+                <th class="center-text">Quartz 연동</th>
+                <th class="center-text">Created By</th>
+                <!-- <th>Actions</th> -->
               </tr>
             </thead>
             <tbody>
@@ -26,19 +26,19 @@
                   <td>{{ job.jobName }}</td>
                   <td>{{ job.metaName }}</td>
                   <td>{{ job.jobDescription }}</td>
-                  <td>{{ job.registeredInQuartz }}</td>
+                  <td>{{ job.jobParameters }}</td>
+                  <td >{{ job.registeredInQuartz }}</td>
                   <td>{{ job.createdBy }}</td>
-                  <td>{{ formatTime(job.createdAt) }}</td>
-<!--                  <td>-->
-<!--                    <button class="btn btn-sm btn-info me-1" @click="handleEdit(job)">수정</button>-->
-<!--                    <button class="btn btn-sm btn-danger me-1" @click="handleDelete(job)">삭제</button>-->
-<!--                    <button class="btn btn-sm btn-primary" @click="handleExecute(job)">실행</button>-->
-<!--                  </td>-->
+                  <!--<td>-->
+                  <!--  <button class="btn btn-sm btn-info me-1" @click="handleEdit(job)">수정</button>-->
+                  <!--  <button class="btn btn-sm btn-danger me-1" @click="handleDelete(job)">삭제</button>-->
+                  <!--  <button class="btn btn-sm btn-primary" @click="handleExecute(job)">실행</button>-->
+                  <!--</td>-->
                 </tr>
               </template>
               <template v-else>
                 <tr>
-                  <td colspan="6">조회된 데이터가 없습니다.</td>
+                  <td colspan="5">조회된 데이터가 없습니다.</td>
                 </tr>
               </template>
             </tbody>
@@ -47,23 +47,52 @@
       </div>
     </div>
 
+    <!-- Parameters Modal -->
+    <div v-if="showParametersModal" class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Job Parameters</h5>
+            <button type="button" class="btn-close" @click="closeParametersModal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div v-if="isLoadingParameters" class="text-center">
+              <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <div v-else-if="currentJobParameters">
+              <pre>{{ JSON.stringify(currentJobParameters, null, 2) }}</pre>
+            </div>
+            <div v-else>
+              <p>파라미터 정보를 불러오지 못했습니다.</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeParametersModal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
   <!-- /.container-fluid -->
-
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref, nextTick } from 'vue'
 import axios from '@/api/axios'
+import $ from 'jquery'
 
 interface BatchJobMeta {
   id: number
   jobName: string
   metaName: string
   jobDescription: string
+  jobParameters: boolean
   registeredInQuartz: boolean
   createdBy: string
-  createdAt: string
+  // createdAt: string // Removed as per request
 }
 
 interface PageResponse {
@@ -80,6 +109,11 @@ const currentPage = ref(0)
 const pageSize = ref(10)
 const totalElements = ref(0)
 
+// Modal state
+const showParametersModal = ref(false)
+const currentJobParameters = ref<any | null>(null)
+const isLoadingParameters = ref(false)
+
 const formatTime = (time: string): string => {
   if (!time) return '-'
   return new Date(time).toLocaleString()
@@ -87,24 +121,17 @@ const formatTime = (time: string): string => {
 
 const fetchBatchJobs = async (page = 0, size = 10, search = '') => {
   try {
-    const response = await axios.get('/batch', {
-      params: {
-        page,
-        size,
-        search
-      }
-    })
-    const data = response.data.data
-    batchJobs.value = data.content
-    totalElements.value = data.totalElements
+    // This initial fetch is now primarily handled by DataTables server-side processing
+    // We might keep it for initial non-DataTables display or remove if DataTables handles all
+    // For now, DataTables ajax will be the main driver.
 
     await nextTick()
 
     if (dataTable.value) {
-      dataTable.value.clear().destroy()
+      dataTable.value.destroy()
     }
 
-    dataTable.value = $('#batchMetaTable').DataTable({
+    dataTable.value = window.jQuery('#batchMetaTable').DataTable({
       paging: true,
       searching: true,
       info: true,
@@ -113,7 +140,7 @@ const fetchBatchJobs = async (page = 0, size = 10, search = '') => {
       processing: true,
       pageLength: size,
       lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "전체"]],
-      dom: '<"top"lf>rt<"bottom"ip><"clear">',
+      dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
       language: {
         emptyTable: '조회된 데이터가 없습니다.',
         lengthMenu: '_MENU_개씩 보기',
@@ -135,8 +162,8 @@ const fetchBatchJobs = async (page = 0, size = 10, search = '') => {
           params: {
             page: dtParams.start / dtParams.length,
             size: dtParams.length,
-            jobName: dtParams.search.value,
-            metaName: dtParams.search.value
+            jobName: dtParams.search.value, // 백엔드 검색 파라미터
+            metaName: dtParams.search.value, // 백엔드 검색 파라미터
           }
         })
         .then(function (response) {
@@ -173,49 +200,108 @@ const fetchBatchJobs = async (page = 0, size = 10, search = '') => {
         { data: 'jobName' },
         { data: 'metaName' },
         { data: 'jobDescription', defaultContent: '-' },
-        { data: 'registeredInQuartz'},
-        { data: 'createdBy' },
         {
-          data: 'createdAt',
+          data: 'jobParameters',
+          orderable: false,
+          searchable: false,
+          className: 'text-center',
           render: function(data, type, row) {
-            return formatTime(data);
+            if (data === true) {
+              return `<a href="#" class="btn btn-info btn-circle btn-sm action-view-parameters" data-job-id="${row.id}" title="View Parameters"><i class="fas fa-search fa-sm"></i></a>`;
+            }
+            return ''; // False면 빈 칸
           }
-        }
+        },
+        {
+          data: 'registeredInQuartz',
+          orderable: false,
+          searchable: false,
+          className: 'text-center',
+          render: function(data, type, row) {
+            if (data === true) {
+              return `<a href="#" class="btn btn-success btn-circle btn-sm action-view-job" data-job-id="${row.id}" title="Job 상세 보기"><i class="fas fa-check"></i></a>`;
+            }
+            return ''; // False면 빈 칸
+          }
+        },
+        { data: 'createdBy' }
+        // { data: 'createdAt' } // Removed column
       ]
-    })
+    });
+
+    // Event delegation for dynamically created buttons (if needed in future)
+    // $('#batchMetaTable tbody').off('click', 'a.action-view-job').on('click', 'a.action-view-job', function (e) {
+    //   e.preventDefault();
+    //   const jobId = $(this).data('job-id');
+    //   console.log('View job details for ID:', jobId);
+    //   // 여기서 Vue 라우터나 메소드를 호출하여 job 상세 페이지로 이동할 수 있습니다.
+    //   // 예: router.push({ name: 'JobDetails', params: { id: jobId } });
+    // });
+
   } catch (err) {
-    console.error('배치 작업 메타 조회 실패', err)
+    console.error('배치 작업 메타 조회 또는 DataTable 초기화 실패', err)
   }
 }
 
+// handleEdit, handleDelete, handleExecute는 현재 DataTables render에서 직접 호출되지 않으므로,
+// 필요하다면 위와 같은 이벤트 위임 방식으로 수정하거나, Vue 컴포넌트 내 다른 방식으로 연동해야 합니다.
 const handleEdit = (job: BatchJobMeta) => {
-  // TODO: 수정 모달 또는 페이지로 이동
-  console.log('수정:', job)
+  console.log('수정 시도 (이벤트 위임 필요):', job)
 }
 
 const handleDelete = async (job: BatchJobMeta) => {
-  if (!confirm(`정말로 삭제하시겠습니까? ${job.metaName}`)) return
-  try {
-    await axios.delete(`/batch/${job.id}`)
-    await fetchBatchJobs()
-  } catch (err) {
-    console.error('삭제 실패', err)
-  }
+  console.log('삭제 시도 (이벤트 위임 필요):', job)
 }
 
 const handleExecute = async (job: BatchJobMeta) => {
-  try {
-    await axios.post('/batch/execute', { id: job.id })
-    alert('배치 작업 실행이 요청되었습니다.')
-  } catch (err) {
-    console.error('실행 실패', err)
-  }
+  console.log('실행 시도 (이벤트 위임 필요):', job)
 }
 
-onMounted(fetchBatchJobs)
+const openParametersModal = async (jobId: number) => {
+  showParametersModal.value = true
+  isLoadingParameters.value = true
+  currentJobParameters.value = null
+  try {
+    // Consistent with prior API calls, using /batch/{id}
+    // The controller is at /api/batch, getJobParameters is at /{metaId}
+    // So if /batch is mapped to /api/batch by proxy/axios config, this is /api/batch/{jobId}
+    const response = await axios.get(`/batch/${jobId}`)
+    if (response.data && response.data.success) {
+      currentJobParameters.value = response.data.data // Assuming the actual params are in response.data.data
+    } else {
+      console.error("Failed to load job parameters:", response.data.message)
+      currentJobParameters.value = { error: response.data.message || "Unknown error" }
+    }
+  } catch (error) {
+    console.error("Error fetching job parameters:", error)
+    currentJobParameters.value = { error: "Failed to fetch parameters due to a network or server error." }
+  }
+  isLoadingParameters.value = false
+}
+
+const closeParametersModal = () => {
+  showParametersModal.value = false
+  currentJobParameters.value = null
+}
+
+onMounted(() => {
+  fetchBatchJobs(currentPage.value, pageSize.value);
+  // 이벤트 위임 추가 (동적으로 생성된 버튼 대응)
+  $(document).on('click', 'a.action-view-parameters', function (e) {
+    e.preventDefault();
+    const jobId = $(this).data('job-id');
+    if (jobId) {
+      openParametersModal(jobId);
+    }
+  });
+});
 </script>
 
 <style scoped>
+.center-text {
+  text-align: center;
+}
+
 .table-responsive {
   overflow-x: auto;
 }
@@ -231,6 +317,7 @@ onMounted(fetchBatchJobs)
   margin-right: 0.25rem;
 }
 
+/* Card and other styles from SB Admin 2 theme if not globally applied */
 .card {
   position: relative;
   display: flex;
@@ -270,5 +357,41 @@ onMounted(fetchBatchJobs)
 
 .text-primary {
   color: #4e73df !important;
+}
+
+/* Ensure DataTables controls are styled correctly with Bootstrap */
+:deep(.dataTables_wrapper .row:first-child) {
+  margin-bottom: 0.5rem; /* Adjust spacing if needed */
+}
+
+:deep(.dataTables_length label),
+:deep(.dataTables_filter label) {
+  margin-bottom: 0; /* Align items vertically if they wrap */
+}
+
+.modal.fade.show {
+  display: block;
+  background-color: rgba(0,0,0,0.5);
+}
+.modal-dialog {
+  margin-top: 5rem; /* Adjust as needed */
+}
+
+.btn-circle.btn-sm {
+    width: 2rem;
+    height: 2rem;
+    padding: 0.5rem 0;
+    border-radius: 1rem;
+    font-size: .75rem;
+    line-height: 1.4;
+}
+.btn-info.btn-circle {
+    background-color: #17a2b8; /* Bootstrap info color */
+    border-color: #17a2b8;
+    color: white;
+}
+.btn-info.btn-circle:hover {
+    background-color: #138496;
+    border-color: #117a8b;
 }
 </style>
