@@ -5,7 +5,7 @@
       <div class="sidebar-brand-icon rotate-n-15">
         <i class="fas fa-laugh-wink"></i>
       </div>
-      <div class="sidebar-brand-text mx-3">Quartz Admin</div>
+      <div class="sidebar-brand-text mx-3">Admin</div>
     </a>
 
     <!-- Divider -->
@@ -27,15 +27,29 @@
 
     <!-- Nav Item - Pages Collapse Menu -->
     <li class="nav-item">
-      <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">
+      <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBatch" aria-expanded="true" aria-controls="collapseBatch">
         <i class="fas fa-fw fa-cog"></i>
-        <span>Components</span>
+        <span>Batch</span>
       </a>
-      <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+      <div id="collapseBatch" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
         <div class="bg-white py-2 collapse-inner rounded">
           <h6 class="collapse-header">Custom Components:</h6>
-          <router-link class="collapse-item" to="/job">Jobs</router-link>
-          <router-link class="collapse-item" to="/cards">Cards</router-link>
+          <router-link class="collapse-item" to="/batch">Batch 관리</router-link>
+          <router-link class="collapse-item" to="/cards">Batch Log</router-link>
+        </div>
+      </div>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseQuartz" aria-expanded="true" aria-controls="collapseQuartz">
+        <i class="fas fa-calendar fa-2x"></i>
+        <span>Quartz</span>
+      </a>
+      <div id="collapseQuartz" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+        <div class="bg-white py-2 collapse-inner rounded">
+          <h6 class="collapse-header">Custom Components:</h6>
+          <router-link class="collapse-item" to="/job">Quartz 관리</router-link>
+          <router-link class="collapse-item" to="/cards">Quartz Log</router-link>
         </div>
       </div>
     </li>
@@ -114,19 +128,19 @@ import { onMounted } from 'vue'
 
 onMounted(() => {
   // Bootstrap의 collapse 기능을 위한 이벤트 리스너 설정
-  const collapseElements = document.querySelectorAll('[data-toggle="collapse"]')
-  collapseElements.forEach(element => {
-    element.addEventListener('click', (e) => {
-      e.preventDefault()
-      const target = element.getAttribute('data-target')
-      if (target) {
-        const collapseElement = document.querySelector(target)
-        if (collapseElement) {
-          collapseElement.classList.toggle('show')
-        }
-      }
-    })
-  })
+  // const collapseElements = document.querySelectorAll('[data-toggle="collapse"]')
+  // collapseElements.forEach(element => {
+  //   element.addEventListener('click', (e) => {
+  //     e.preventDefault()
+  //     const target = element.getAttribute('data-target')
+  //     if (target) {
+  //       const collapseElement = document.querySelector(target)
+  //       if (collapseElement) {
+  //         collapseElement.classList.toggle('show')
+  //       }
+  //     }
+  //   })
+  // })
 })
 </script>
 
