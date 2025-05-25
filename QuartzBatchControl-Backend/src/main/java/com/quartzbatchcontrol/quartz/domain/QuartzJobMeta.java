@@ -34,8 +34,8 @@ public class QuartzJobMeta {
     @Column(name = "cron_expression")
     private String cronExpression;
 
-    @Column(name = "meta_id")
-    private Long metaId; // batch_job_meta 테이블의 key
+    @Column(name = "batch_meta_id")
+    private Long batchMetaId; // batch_job_meta 테이블의 key
 
     @Column(name = "created_by", nullable = false)
     private String createdBy;
@@ -67,7 +67,7 @@ public class QuartzJobMeta {
     public void update(QuartzJobEventType eventType, String cronExpression, Long metaId, String userName) {
         this.eventType = eventType;
         this.cronExpression = cronExpression;
-        this.metaId = metaId;
+        this.batchMetaId = metaId;
         this.updatedBy = userName;
         this.updatedAt = LocalDateTime.now();
     }

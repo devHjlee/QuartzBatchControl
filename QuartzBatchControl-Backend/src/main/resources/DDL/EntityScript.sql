@@ -30,7 +30,7 @@ CREATE TABLE quartz_job_meta (
                                          job_type VARCHAR(50) NOT NULL,        -- ENUM (QuartzJobType)
                                          event_type VARCHAR(50) NOT NULL,      -- ENUM (QuartzJobEventType)
                                          cron_expression VARCHAR(255) DEFAULT NULL,
-                                         meta_id BIGINT DEFAULT NULL,
+                                         batch_meta_id BIGINT DEFAULT NULL,
                                          created_by VARCHAR(100) NOT NULL,
                                          created_at DATETIME NOT NULL,
                                          updated_by VARCHAR(100) NOT NULL,

@@ -44,7 +44,7 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
                 ))
                 .from(batchJobMeta)
                 .leftJoin(quartzJobMeta).on(
-                        batchJobMeta.id.eq(quartzJobMeta.metaId)
+                        batchJobMeta.id.eq(quartzJobMeta.batchMetaId)
                 )
                 .where(
                         jobNameContains(jobName),
