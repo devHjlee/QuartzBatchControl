@@ -6,6 +6,7 @@ import com.quartzbatchcontrol.batch.domain.QBatchJobMeta;
 import com.quartzbatchcontrol.quartz.domain.QQuartzJobMeta;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,7 +34,8 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
                         batchJobMeta.jobName,
                         batchJobMeta.metaName,
                         batchJobMeta.jobDescription,
-                        batchJobMeta.jobParameters.isNotNull(),
+                        batchJobMeta.jobParameters,
+                        Expressions.constant(0),
                         batchJobMeta.createdBy,
                         batchJobMeta.createdAt,
                         batchJobMeta.updatedBy,

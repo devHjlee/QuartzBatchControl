@@ -40,7 +40,8 @@ public class BatchJobMeta {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public void update(String jobDescription, String jobParameters, String updatedBy) {
+    public void update(String metaName, String jobDescription, String jobParameters, String updatedBy) {
+        this.metaName = metaName;
         this.jobDescription = jobDescription;
         this.jobParameters = jobParameters;
         this.updatedBy = updatedBy;

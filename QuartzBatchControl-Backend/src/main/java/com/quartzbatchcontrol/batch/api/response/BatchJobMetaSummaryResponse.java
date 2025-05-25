@@ -12,7 +12,8 @@ public class BatchJobMetaSummaryResponse {
     private final String jobName;
     private final String metaName;
     private final String jobDescription;
-    private final boolean jobParameters;
+    private final String jobParameters;
+    private final int jobParameterSize;
     private final String createdBy;
     private final LocalDateTime createdAt;
     private final String updatedBy;
@@ -24,7 +25,8 @@ public class BatchJobMetaSummaryResponse {
             String jobName,
             String metaName,
             String jobDescription,
-            boolean jobParameters,
+            String jobParameters,
+            int jobParameterSize,
             String createdBy,
             LocalDateTime createdAt,
             String updatedBy,
@@ -35,6 +37,7 @@ public class BatchJobMetaSummaryResponse {
         this.metaName = metaName;
         this.jobDescription = jobDescription;
         this.jobParameters = jobParameters;
+        this.jobParameterSize = jobParameterSize;
         this.createdBy = createdBy;
         this.createdAt = createdAt;
         this.updatedBy = updatedBy;
