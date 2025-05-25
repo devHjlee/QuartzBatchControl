@@ -17,14 +17,16 @@ import org.springframework.batch.core.configuration.JobRegistry;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.NoSuchJobException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
-import com.quartzbatchcontrol.batch.api.response.BatchJobParameterResponse;
+import com.quartzbatchcontrol.batch.api.response.BatchJobDetailResponse;
 import com.quartzbatchcontrol.batch.api.response.BatchJobMetaSummaryResponse;
 
 @Slf4j
@@ -35,6 +37,55 @@ public class BatchJobService {
     private final JobRegistry jobRegistry;
     private final BatchJobMetaRepository batchJobMetaRepository;
     private final ObjectMapper objectMapper;
+
+    @Transactional(readOnly = true)
+    public Page<BatchJobMetaSummaryResponse> getAllBatchJobMetas(String jobName, String metaName, Pageable pageable) {
+        Page<BatchJobMetaSummaryResponse> rawPage = batchJobMetaRepository.findBySearchCondition(jobName, metaName, pageable);
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        List<BatchJobMetaSummaryResponse> content = rawPage.getContent().stream()
+                .map(raw -> {
+                    int count = 0;
+                    try {
+                        if (raw.getJobParameters() != null) {
+                            Map<String, Object> map = mapper.readValue(raw.getJobParameters(), new TypeReference<>() {});
+                            count = map.size();
+                        }
+                    } catch (Exception e) {
+                        log.warn("파라미터 파싱 실패: {}", raw.getJobParameters(), e); // todo 코드추가
+                    }
+
+                    return BatchJobMetaSummaryResponse.builder()
+                            .id(raw.getId())
+                            .jobName(raw.getJobName())
+                            .metaName(raw.getMetaName())
+                            .jobDescription(raw.getJobDescription())
+                            .jobParameters(raw.getJobParameters())
+                            .createdBy(raw.getCreatedBy())
+                            .createdAt(raw.getCreatedAt())
+                            .updatedBy(raw.getUpdatedBy())
+                            .updatedAt(raw.getUpdatedAt())
+                            .isRegisteredInQuartz(raw.isRegisteredInQuartz())
+                            .jobParameterSize(count)
+                            .build();
+                }).toList();
+        return new PageImpl<>(content, pageable, rawPage.getTotalElements());
+    }
+
+    @Transactional(readOnly = true)
+    public BatchJobDetailResponse getJobParameters(Long metaId) {
+        BatchJobMeta batchJobMeta = batchJobMetaRepository.findById(metaId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND,
+                        "BatchJobMeta not found with id: " + metaId));
+        return BatchJobDetailResponse.from(batchJobMeta);
+    }
+
+    public List<String> getAvailableBatchJobs() {
+        return jobRegistry.getJobNames().stream()
+                .sorted()
+                .toList();
+    }
 
     @Transactional
     public void saveBatchJob(BatchJobMetaRequest request, String userName) {
@@ -78,6 +129,7 @@ public class BatchJobService {
                     batchJobMeta.getJobParameters();
 
             batchJobMeta.update(
+                    request.getMetaName(),
                     request.getJobDescription(),
                     serializedParams,
                     userName
@@ -100,19 +152,6 @@ public class BatchJobService {
             log.error("배치 작업 실행 중 오류 발생: {}", e.getMessage(), e);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
-    }
-
-    @Transactional(readOnly = true)
-    public Page<BatchJobMetaSummaryResponse> getAllBatchJobMetas(String jobName, String metaName, Pageable pageable) {
-        return batchJobMetaRepository.findBySearchCondition(jobName, metaName, pageable);
-    }
-
-    @Transactional(readOnly = true)
-    public BatchJobParameterResponse getJobParameters(Long metaId) {
-        BatchJobMeta batchJobMeta = batchJobMetaRepository.findById(metaId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND,
-                        "BatchJobMeta not found with id: " + metaId));
-        return BatchJobParameterResponse.from(batchJobMeta);
     }
 
     private boolean isValidJob(String jobName) {
