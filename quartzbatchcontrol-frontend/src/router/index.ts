@@ -1,5 +1,6 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useTabsStore } from '@/stores/tabs'
 
 import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
@@ -9,11 +10,11 @@ import BatchView from '@/views/BatchView.vue'
 
 const routes = [
   { path: '/', redirect: '/dashboard' },
-  { path: '/login', name: 'Login', component: LoginView },
-  { path: '/dashboard', name: 'Dashboard', component: DashboardView, meta: { requiresAuth: true } },
-  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundView },
-  { path: '/batch', name: 'Batch', component: BatchView, meta: { requiresAuth: true } },
-  { path: '/job', name: 'Job', component: JobView, meta: { requiresAuth: true } },
+  { path: '/login', name: 'Login', component: LoginView, meta: { title: '로그인' } },
+  { path: '/dashboard', name: 'Dashboard', component: DashboardView, meta: { requiresAuth: true, title: '대시보드', closable: false } },
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundView, meta: { title: '페이지 없음' } },
+  { path: '/batch', name: 'Batch 관리', component: BatchView, meta: { requiresAuth: true, title: 'Batch 관리', closable: true } },
+  { path: '/job', name: 'Quartz 관리', component: JobView, meta: { requiresAuth: true, title: 'Quartz Job 관리', closable: true } },
 ]
 
 const router = createRouter({
@@ -28,6 +29,13 @@ router.beforeEach((to, from, next) => {
     next('/login')
   } else {
     next()
+  }
+})
+
+router.afterEach((to: RouteLocationNormalized) => {
+  const tabsStore = useTabsStore()
+  if (to.name !== 'Login' && to.name !== 'NotFound') {
+    tabsStore.addTab(to as any)
   }
 })
 

@@ -5,6 +5,13 @@
   </div>
 </template>
 
+<script lang="ts">
+export default {
+  name: 'Dashboard' // 라우터에 정의된 name과 일치
+}
+</script>
+
 <script setup lang="ts">
 // 필요시 스크립트 작성
+import Dashboard from '@/components/dashboard/Dashboard.vue';
 </script>
