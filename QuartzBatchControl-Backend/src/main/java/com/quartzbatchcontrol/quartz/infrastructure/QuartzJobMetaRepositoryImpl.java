@@ -39,6 +39,7 @@ public class QuartzJobMetaRepositoryImpl implements QuartzJobMetaRepositoryCusto
                         quartzTriggerView.nextFireTime,
                         quartzTriggerView.previousFireTime,
                         quartzTriggerView.triggerState,
+                        quartzCronTriggerView.cronExpression,
                         quartzJobMeta.createdBy
                 ))
                 .from(quartzJobMeta)

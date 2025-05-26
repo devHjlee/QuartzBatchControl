@@ -14,8 +14,9 @@
                 <th class="center-text">Job Name</th>
                 <th class="center-text">Job Type</th>
                 <th class="center-text">Trigger State</th>
-                <th class="center-text">Next Fire Time</th>
+                <th class="center-text">Cron Expression</th>
                 <th class="center-text">Prev Fire Time</th>
+                <th class="center-text">Next Fire Time</th>
                 <th class="center-text">Created By</th>
                 <th class="center-text">Action</th>
               </tr>
@@ -115,6 +116,7 @@ interface QuartzJobInfo {
   nextFireTime: number;
   prevFireTime: number;
   triggerState: string;
+  cronExpression: string;
   createdBy: string;
 }
 
@@ -229,15 +231,16 @@ const fetchQuartzJobs = async () => {
         { data: 'jobName' },
         { data: 'jobType', className: 'text-center' },
         { data: 'triggerState', className: 'text-center' },
+        { data: 'cronExpression', className: 'text-center' },
         {
-          data: 'nextFireTime',
+          data: 'prevFireTime',
           className: 'text-center',
           render: function(data) {
             return formatTime(data);
           }
         },
         {
-          data: 'prevFireTime',
+          data: 'nextFireTime',
           className: 'text-center',
           render: function(data) {
             return formatTime(data);
@@ -365,7 +368,7 @@ const handleSaveNewQuartzJob = async () => {
       jobType: 'BATCH',
       jobName: jobName,
       jobGroup: 'BATCH',
-      metaId: newQuartzJobForm.value.selectedBatchMetaId,
+      batchMetaId: newQuartzJobForm.value.selectedBatchMetaId,
       cronExpression: newQuartzJobForm.value.cronExpression.trim(),
       misfirePolicy: 'FIRE_AND_PROCEED',
       eventType: 'REGISTER'
