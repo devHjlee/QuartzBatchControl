@@ -41,8 +41,8 @@ public class BatchJobService {
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
-    public Page<BatchJobMetaSummaryResponse> getAllBatchJobMetas(String jobName, String metaName, Pageable pageable) {
-        Page<BatchJobMetaSummaryResponse> rawPage = batchJobMetaRepository.findBySearchCondition(jobName, metaName, pageable);
+    public Page<BatchJobMetaSummaryResponse> getAllBatchJobMetas(String keyword, Pageable pageable) {
+        Page<BatchJobMetaSummaryResponse> rawPage = batchJobMetaRepository.findBySearchCondition(keyword, pageable);
 
         ObjectMapper mapper = new ObjectMapper();
 

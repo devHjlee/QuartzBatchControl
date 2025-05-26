@@ -22,5 +22,6 @@ public class QuartzJobMetaSummaryResponse {
     private Long prevFireTime;
     private String triggerState;
     private String cronExpression;
+    private String batchName;
     private String createdBy;
 } 

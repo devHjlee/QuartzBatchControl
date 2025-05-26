@@ -12,7 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -25,7 +24,7 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
     private final QQuartzJobMeta quartzJobMeta = QQuartzJobMeta.quartzJobMeta;
 
     @Override
-    public Page<BatchJobMetaSummaryResponse> findBySearchCondition(String jobName, String metaName, Pageable pageable) {
+    public Page<BatchJobMetaSummaryResponse> findBySearchCondition(String keyword, Pageable pageable) {
         List<BatchJobMetaSummaryResponse> content = queryFactory
                 .select(Projections.constructor(
                         BatchJobMetaSummaryResponse.class,
@@ -46,8 +45,7 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
                         batchJobMeta.id.eq(quartzJobMeta.batchMetaId)
                 )
                 .where(
-                        jobNameContains(jobName),
-                        metaNameContains(metaName)
+                        containsKeyword(keyword)
                 )
                 .orderBy(batchJobMeta.createdAt.desc())
                 .offset(pageable.getOffset())
@@ -58,19 +56,19 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
                 .select(batchJobMeta.count())
                 .from(batchJobMeta)
                 .where(
-                        jobNameContains(jobName),
-                        metaNameContains(metaName)
+                        containsKeyword(keyword)
                 )
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }
 
-    private BooleanExpression jobNameContains(String jobName) {
-        return StringUtils.hasText(jobName) ? batchJobMeta.jobName.containsIgnoreCase(jobName) : null;
-    }
+    private BooleanExpression containsKeyword(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return null;
+        }
 
-    private BooleanExpression metaNameContains(String metaName) {
-        return StringUtils.hasText(metaName) ? batchJobMeta.metaName.containsIgnoreCase(metaName) : null;
+        return batchJobMeta.jobName.containsIgnoreCase(keyword)
+                .or(batchJobMeta.metaName.containsIgnoreCase(keyword));
     }
 } 

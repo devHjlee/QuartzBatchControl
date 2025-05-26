@@ -13,6 +13,7 @@
               <tr>
                 <th class="center-text">Job Name</th>
                 <th class="center-text">Job Type</th>
+                <th class="center-text">Batch Name</th>
                 <th class="center-text">Trigger State</th>
                 <th class="center-text">Cron Expression</th>
                 <th class="center-text">Prev Fire Time</th>
@@ -117,6 +118,7 @@ interface QuartzJobInfo {
   prevFireTime: number;
   triggerState: string;
   cronExpression: string;
+  batchName: string;
   createdBy: string;
 }
 
@@ -207,7 +209,7 @@ const fetchQuartzJobs = async () => {
           params: {
             page: dtParams.start / dtParams.length,
             size: dtParams.length,
-            jobName: searchInputValue.value,
+            keyword: searchInputValue.value,
           }
         })
         .then(function (response) {
@@ -233,6 +235,7 @@ const fetchQuartzJobs = async () => {
       columns: [
         { data: 'jobName' },
         { data: 'jobType', className: 'text-center' },
+        { data: 'batchName' },
         { data: 'triggerState', className: 'text-center' },
         { data: 'cronExpression', className: 'text-center' },
         {

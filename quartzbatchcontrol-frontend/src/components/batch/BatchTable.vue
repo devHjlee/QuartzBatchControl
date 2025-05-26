@@ -272,8 +272,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
           params: {
             page: dtParams.start / dtParams.length,
             size: dtParams.length,
-            jobName: searchInputValue.value, // Use our reactive search input value
-            metaName: searchInputValue.value, // Use our reactive search input value
+            keyword: searchInputValue.value,
           }
         })
         .then(function (response) {
