@@ -33,7 +33,5 @@ public class QuartzJobRequest {
     @NotNull(message = "Misfire 정책은 필수입니다.")
     private MisfirePolicy misfirePolicy;
 
-    private JobDataMap parameters;
-
     private QuartzJobEventType eventType;
 }

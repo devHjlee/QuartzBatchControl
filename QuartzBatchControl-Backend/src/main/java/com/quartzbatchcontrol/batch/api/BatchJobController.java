@@ -1,6 +1,7 @@
 package com.quartzbatchcontrol.batch.api;
 
 import com.quartzbatchcontrol.batch.api.request.BatchJobMetaRequest;
+import com.quartzbatchcontrol.batch.api.response.BatchJobMetaResponse;
 import com.quartzbatchcontrol.batch.application.BatchJobService;
 import com.quartzbatchcontrol.global.response.ApiResponse;
 import com.quartzbatchcontrol.global.security.UserPrincipal;
@@ -47,6 +48,11 @@ public class BatchJobController {
         return ResponseEntity.ok(ApiResponse.success(batchJobList,"배치 목록 조회를 완료했습니다."));
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<ApiResponse<List<BatchJobMetaResponse>>> getAllBatchJobMetas() {
+        List<BatchJobMetaResponse> batchJobList = batchJobService.getAllBatchJobMetas();
+        return ResponseEntity.ok(ApiResponse.success(batchJobList,"배치 목록 조회를 완료했습니다."));
+    }
     @PostMapping
     public ResponseEntity<ApiResponse<String>> saveBatchJob(
             @RequestBody BatchJobMetaRequest request,

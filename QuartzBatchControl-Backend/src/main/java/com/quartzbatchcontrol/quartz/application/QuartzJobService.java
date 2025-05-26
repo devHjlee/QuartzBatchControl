@@ -4,10 +4,14 @@ import com.quartzbatchcontrol.batch.infrastructure.BatchJobMetaRepository;
 import com.quartzbatchcontrol.global.exception.BusinessException;
 import com.quartzbatchcontrol.global.exception.ErrorCode;
 import com.quartzbatchcontrol.quartz.api.request.QuartzJobRequest;
+import com.quartzbatchcontrol.quartz.api.response.QuartzJobMetaSummaryResponse;
 import com.quartzbatchcontrol.quartz.enums.QuartzJobType;
+import com.quartzbatchcontrol.quartz.infrastructure.QuartzJobMetaRepository;
 import com.quartzbatchcontrol.quartz.job.QuartzBatchExecutor;
 import lombok.RequiredArgsConstructor;
 import org.quartz.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,13 +23,20 @@ public class QuartzJobService {
 
     private final Scheduler scheduler;
     private final QuartzJobMetaService quartzJobMetaService;
+    private final QuartzJobMetaRepository quartzJobMetaRepository;
     private final BatchJobMetaRepository batchJobMetaRepository;
+
+
+    @Transactional(readOnly = true)
+    public Page<QuartzJobMetaSummaryResponse> getAllQuartzJobMetas(String keyword, Pageable pageable) {
+        return quartzJobMetaRepository.findBySearchCondition(keyword, pageable);
+    }
 
     /**
      * 공통 Job 등록
      */
     private void scheduleJob(QuartzJobRequest request) {
-        JobDataMap dataMap = request.getParameters() != null ? request.getParameters() : new JobDataMap();
+        JobDataMap dataMap = new JobDataMap();
 
         Class<? extends Job> jobClass;
 

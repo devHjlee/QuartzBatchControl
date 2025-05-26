@@ -1,7 +1,6 @@
 package com.quartzbatchcontrol.batch.infrastructure;
 
 import com.quartzbatchcontrol.batch.api.response.BatchJobMetaSummaryResponse;
-import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
 import com.quartzbatchcontrol.batch.domain.QBatchJobMeta;
 import com.quartzbatchcontrol.quartz.domain.QQuartzJobMeta;
 import com.querydsl.core.types.Projections;
