@@ -33,7 +33,6 @@ public class QuartzJobMetaRepositoryImpl implements QuartzJobMetaRepositoryCusto
                         quartzJobMeta.jobName,
                         quartzJobMeta.jobGroup,
                         quartzJobMeta.jobType,
-                        quartzJobMeta.eventType,
                         quartzJobMeta.batchMetaId,
                         quartzTriggerView.triggerName,
                         quartzTriggerView.triggerGroup,

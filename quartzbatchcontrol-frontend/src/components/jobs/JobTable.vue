@@ -28,12 +28,78 @@
       </div>
     </div>
 
+    <!-- Add Quartz Job Modal -->
+    <div v-if="showAddQuartzJobModal" class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Quartz Job 등록</h5>
+            <button type="button" class="btn-close" @click="closeAddQuartzJobModal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+            <div class="mb-3">
+              <label class="form-label">Job Type</label>
+              <select class="form-control" v-model="newQuartzJobForm.jobType">
+                <option value="SIMPLE">SIMPLE</option>
+                <option value="BATCH">BATCH</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Job Name</label>
+              <input type="text" class="form-control" v-model="newQuartzJobForm.jobName" placeholder="Job Name 입력">
+            </div>
+
+            <div class="mb-3" v-if="newQuartzJobForm.jobType === 'BATCH'">
+              <label class="form-label">Batch Meta</label>
+              <select class="form-control" v-model="newQuartzJobForm.selectedBatchMetaId" :disabled="isLoadingBatchMetas">
+                <option value="" disabled>{{ isLoadingBatchMetas ? '로딩 중...' : '배치 메타를 선택하세요' }}</option>
+                <option v-for="batchMeta in availableBatchMetas" :key="batchMeta.id" :value="batchMeta.id">{{ batchMeta.metaName }} (ID: {{ batchMeta.id }})</option>
+              </select>
+              <div v-if="isLoadingBatchMetas" class="spinner-border spinner-border-sm text-primary mt-2" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Quartz Cron Expression</label>
+              <div class="input-group">
+                <input type="text" class="form-control" v-model="newQuartzJobForm.cronExpression" placeholder="e.g., 0 0/2 * * * ?">
+                <button class="btn btn-outline-secondary" type="button" @click="fetchNextFireTimes" :disabled="isLoadingNextFireTimes">
+                  <span v-if="isLoadingNextFireTimes" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  {{ isLoadingNextFireTimes ? '확인 중...' : '다음 실행 시간 확인' }}
+                </button>
+              </div>
+              <div v-if="nextFireTimes.length > 0 && !isLoadingNextFireTimes && !cronError" class="mt-2 mb-0">
+                <p class="form-text mb-1"><strong>다음 실행 예정 시간:</strong></p>
+                <ul class="list-group list-group-flush">
+                  <li v-for="(time, index) in nextFireTimes" :key="index" class="list-group-item py-1 px-0 form-text">
+                    {{ formatTime(time) }}
+                  </li>
+                </ul>
+              </div>
+              <div v-if="cronError && !isLoadingNextFireTimes" class="mt-2 text-danger form-text">
+                {{ cronError }}
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeAddQuartzJobModal">취소</button>
+            <button type="button" class="btn btn-primary" @click="handleSaveNewQuartzJob">저장</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
   <!-- /.container-fluid -->
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import axios from '@/api/axios'
 import $ from 'jquery'
 
@@ -52,16 +118,54 @@ interface QuartzJobInfo {
   createdBy: string;
 }
 
+interface BatchMetaInfo {
+  id: number;
+  metaName: string;
+  // 필요에 따라 다른 필드 추가 가능
+}
+
+interface NewQuartzJobForm {
+  jobType: 'SIMPLE' | 'BATCH';
+  jobName: string; // 사용자 입력 Job Name
+  selectedBatchMetaId: number | string; // BATCH일 때 선택된 배치작업의 ID
+  cronExpression: string;
+}
+
 const quartzJobs = ref<QuartzJobInfo[]>([])
 const dataTable = ref<any>(null)
-const searchInputValue = ref(''); // To store search input
+const searchInputValue = ref('');
+
+// Add Quartz Job Modal state
+const showAddQuartzJobModal = ref(false);
+const newQuartzJobForm = ref<NewQuartzJobForm>({
+  jobType: 'SIMPLE',
+  jobName: '', // jobNameInput에서 jobName으로 변경
+  selectedBatchMetaId: '',
+  cronExpression: ''
+});
+const availableBatchMetas = ref<BatchMetaInfo[]>([]);
+const isLoadingBatchMetas = ref(false);
+const nextFireTimes = ref<number[]>([]);
+const isLoadingNextFireTimes = ref(false);
+const cronError = ref('');
+
+watch(() => newQuartzJobForm.value.jobType, (newType) => {
+  if (newType === 'SIMPLE') {
+    newQuartzJobForm.value.selectedBatchMetaId = ''; // SIMPLE 타입으로 변경 시, 선택된 배치 메타 ID 초기화
+  } else { // BATCH 타입
+    // jobName은 이제 직접 입력이므로 BATCH 타입으로 변경 시 초기화하지 않음
+    if (availableBatchMetas.value.length === 0 && !isLoadingBatchMetas.value) {
+      fetchAvailableBatchMetas();
+    }
+  }
+});
 
 const formatTime = (timestamp: number): string => {
   if (!timestamp) return '-'
   return new Date(timestamp).toLocaleString()
 }
 
-const fetchquartzJobs = async () => {
+const fetchQuartzJobs = async () => {
   try {
     if (dataTable.value) {
       dataTable.value.destroy()
@@ -69,13 +173,14 @@ const fetchquartzJobs = async () => {
 
     dataTable.value = window.jQuery('#quartzMetaTable').DataTable({
       paging: true,
-      searching: false, // Disable DataTables default search, we'll use a custom one
+      searching: false,
       info: true,
       responsive: true,
       serverSide: true,
       processing: true,
-      pageLength: 10, // 기본 페이지 크기를 API의 기본값과 유사하게 설정하거나, API에서 size를 받도록 수정
-      lengthMenu: [[10, 20, 50, -1], [10, 20, 50, "전체"]], // API의 size 파라미터와 일치시키거나 유연하게 처리
+      ordering: false, // 테이블 정렬 기능 비활성화
+      pageLength: 10,
+      lengthMenu: [[10, 20, 50, -1], [10, 20, 50, "전체"]],
       dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"<"#customSearchContainer">>><"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
       language: {
         emptyTable: '조회된 데이터가 없습니다.',
@@ -93,23 +198,21 @@ const fetchquartzJobs = async () => {
         processing: '데이터를 불러오는 중...',
       },
       ajax: function (dtParams, callback, settings) {
-        axios.get('/quartz-jobs', { // API 엔드포인트 확인 필요
+        axios.get('/quartz-jobs', {
           params: {
             page: dtParams.start / dtParams.length,
             size: dtParams.length,
-            jobName: searchInputValue.value, // 검색 파라미터 수정
-            // metaName: searchInputValue.value, // metaName 파라미터는 새 API 응답에 없으므로 제거
+            jobName: searchInputValue.value,
           }
         })
         .then(function (response) {
-          // API 응답 구조에 맞춰 수정
           const backendResponse = response.data;
           if (backendResponse.success && backendResponse.data && backendResponse.data.content && backendResponse.data.page) {
             quartzJobs.value = backendResponse.data.content;
             callback({
               draw: dtParams.draw,
               recordsTotal: backendResponse.data.page.totalElements,
-              recordsFiltered: backendResponse.data.page.totalElements, // 검색 결과에 따라 이 값을 조정해야 할 수 있음
+              recordsFiltered: backendResponse.data.page.totalElements,
               data: backendResponse.data.content
             });
           } else {
@@ -129,14 +232,14 @@ const fetchquartzJobs = async () => {
         {
           data: 'nextFireTime',
           className: 'text-center',
-          render: function(data, type, row) {
+          render: function(data) {
             return formatTime(data);
           }
         },
         {
           data: 'prevFireTime',
           className: 'text-center',
-          render: function(data, type, row) {
+          render: function(data) {
             return formatTime(data);
           }
         },
@@ -147,8 +250,6 @@ const fetchquartzJobs = async () => {
           searchable: false,
           className: 'text-center',
           render: function(data, type, row) {
-            // 수정 버튼은 handleEdit 함수가 제거되었으므로 일단 제거
-            // <button class="btn btn-sm btn-primary action-edit me-1" data-job-id="${row.id}">수정</button>
             return `
               <button class="btn btn-sm btn-info action-execute" data-job-id="${row.id}">실행</button>
             `;
@@ -158,20 +259,19 @@ const fetchquartzJobs = async () => {
       initComplete: function() {
         const customSearchContainer = document.getElementById('customSearchContainer');
         if (customSearchContainer) {
-          // 추가 버튼은 handleAddNew 함수가 제거되었으므로 일단 제거
           customSearchContainer.innerHTML = `
             <div class="input-group">
               <input type="text" class="form-control custom-search-input" placeholder="Job Name 검색">
-              <button class="btn btn-outline-secondary custom-search-button" type="button">검색</button>
+              <button class="btn btn-outline-secondary custom-search-button me-2" type="button">검색</button>
+              <button class="btn btn-primary custom-add-button" type="button">추가</button>
             </div>
           `;
-          // <button class="btn btn-primary ms-2 custom-add-button" type="button">추가</button>
 
           const searchInput = customSearchContainer.querySelector('.custom-search-input');
           const searchButton = customSearchContainer.querySelector('.custom-search-button');
-          // const addButton = customSearchContainer.querySelector('.custom-add-button'); // addButton 관련 로직 제거
+          const addButton = customSearchContainer.querySelector('.custom-add-button');
 
-          if (searchInput instanceof HTMLInputElement && searchButton) {
+          if (searchInput instanceof HTMLInputElement && searchButton && addButton) {
             searchInput.addEventListener('keyup', (event) => {
               searchInputValue.value = searchInput.value;
               if (event.key === 'Enter') {
@@ -182,28 +282,14 @@ const fetchquartzJobs = async () => {
               searchInputValue.value = searchInput.value;
               dataTable.value.ajax.reload();
             });
-            // addButton 관련 로직 제거
-            // if (addButton) {
-            //   addButton.addEventListener('click', () => {
-            //     // handleAddNew(); // handleAddNew 함수가 제거됨
-            //   });
-            // }
+            addButton.addEventListener('click', () => {
+              openAddQuartzJobModal();
+            });
           }
         }
       }
     });
 
-    // 수정 버튼 이벤트 바인딩 (제거됨)
-    // $(document).off('click', '#quartzMetaTable button.action-edit').on('click', '#quartzMetaTable button.action-edit', function (e) {
-    //   e.preventDefault();
-    //   const jobId = $(this).data('job-id');
-    //   const job = quartzJobs.value.find(j => j.id === jobId);
-    //   if (job) {
-    //     // handleEdit(job); // handleEdit 함수가 제거됨
-    //   }
-    // });
-
-    // 실행 버튼 이벤트 바인딩
     $(document).off('click', '#quartzMetaTable button.action-execute').on('click', '#quartzMetaTable button.action-execute', function (e) {
       e.preventDefault();
       const jobId = $(this).data('job-id');
@@ -215,18 +301,114 @@ const fetchquartzJobs = async () => {
     });
 
   } catch (err) {
-    console.error('배치 작업 조회 또는 DataTable 초기화 실패', err)
+    console.error('Quartz 작업 조회 또는 DataTable 초기화 실패', err)
   }
 }
 
+const fetchAvailableBatchMetas = async () => {
+  isLoadingBatchMetas.value = true;
+  try {
+    const response = await axios.get('/batch/all'); // API 엔드포인트 확인 필요
+    if (response.data && response.data.success && Array.isArray(response.data.data)) {
+      availableBatchMetas.value = response.data.data.map(item => ({ id: item.id, metaName: item.metaName }));
+      // BATCH 타입이 기본 선택이고, 데이터 로드 후 첫번째 항목 자동 선택 (선택사항)
+      // if (newQuartzJobForm.value.jobType === 'BATCH' && availableBatchMetas.value.length > 0 && !newQuartzJobForm.value.selectedBatchMetaId) {
+      //   newQuartzJobForm.value.selectedBatchMetaId = availableBatchMetas.value[0].id;
+      // }
+    } else {
+      console.error('Failed to load available batch metas or malformed response:', response.data);
+      alert('사용 가능한 배치 작업 목록을 불러오는데 실패했습니다.');
+      availableBatchMetas.value = []; // 실패 시 빈 배열로 초기화
+    }
+  } catch (error) {
+    console.error('Error fetching available batch metas:', error);
+    alert('사용 가능한 배치 작업 목록 조회 중 오류가 발생했습니다.');
+    availableBatchMetas.value = []; // 에러 시 빈 배열로 초기화
+  } finally {
+    isLoadingBatchMetas.value = false;
+  }
+};
+
+const openAddQuartzJobModal = () => {
+  newQuartzJobForm.value = {
+    jobType: 'SIMPLE',
+    jobName: '', // jobNameInput에서 jobName으로 변경
+    selectedBatchMetaId: '',
+    cronExpression: ''
+  };
+  availableBatchMetas.value = []; // 모달 열 때마다 이전 목록 초기화
+  nextFireTimes.value = []; // 모달 열 때 다음 실행 시간 초기화
+  cronError.value = '';      // 모달 열 때 에러 메시지 초기화
+  // SIMPLE 타입이 기본이므로, BATCH 메타 정보는 BATCH 타입 선택 시 로드 (watch 로직에서 처리)
+  showAddQuartzJobModal.value = true;
+};
+
+const closeAddQuartzJobModal = () => {
+  showAddQuartzJobModal.value = false;
+};
+
+const handleSaveNewQuartzJob = async () => {
+  if (!newQuartzJobForm.value.jobName.trim()) {
+    alert('Job Name을 입력해주세요.');
+    return;
+  }
+
+  const jobName = newQuartzJobForm.value.jobName.trim();
+  let payload = {};
+
+  if (newQuartzJobForm.value.jobType === 'BATCH') {
+    if (!newQuartzJobForm.value.selectedBatchMetaId) {
+      alert('Batch Meta를 선택해주세요.');
+      return;
+    }
+    payload = {
+      jobType: 'BATCH',
+      jobName: jobName,
+      jobGroup: 'BATCH',
+      metaId: newQuartzJobForm.value.selectedBatchMetaId,
+      cronExpression: newQuartzJobForm.value.cronExpression.trim(),
+      misfirePolicy: 'FIRE_AND_PROCEED',
+      eventType: 'REGISTER'
+    };
+  } else { // SIMPLE type
+    payload = {
+      jobType: 'SIMPLE',
+      jobName: jobName,
+      jobGroup: 'UTIL',
+      cronExpression: newQuartzJobForm.value.cronExpression.trim(),
+      misfirePolicy: 'FIRE_AND_PROCEED',
+      eventType: 'REGISTER'
+    };
+  }
+
+  if (!newQuartzJobForm.value.cronExpression.trim()) {
+    alert('Cron Expression을 입력해주세요.');
+    return;
+  }
+
+  try {
+    const response = await axios.post('/quartz-jobs', payload); // API 엔드포인트 확인 필요
+    if (response.data && response.data.success) {
+      alert('Quartz Job이 성공적으로 등록되었습니다.');
+      closeAddQuartzJobModal();
+      if (dataTable.value) {
+        dataTable.value.ajax.reload(null, false);
+      }
+    } else {
+      alert(response.data?.message || 'Quartz Job 등록에 실패했습니다.');
+    }
+  } catch (error: any) {
+    alert(error.response?.data?.message || 'Quartz Job 등록 중 오류가 발생했습니다.');
+  }
+};
+
 const handleExecuteJob = async (jobId: number) => {
   try {
-    const response = await axios.post(`/batch/execute/${jobId}`); // API 엔드포인트 확인 필요
+    const response = await axios.post(`/quartz-jobs/execute/${jobId}`); // 엔드포인트는 /quartz-jobs 기준으로 변경될 수 있음
     if (response.data && response.data.success) {
       alert('작업이 성공적으로 실행 요청되었습니다.');
-      // Optionally, refresh the table or update UI
       if (dataTable.value) {
-        dataTable.value.ajax.reload(null, false); // 현재 페이징 유지하며 리로드
+        dataTable.value.ajax.reload(null, false);
       }
     } else {
       alert(response.data?.message || '작업 실행 요청에 실패했습니다.');
@@ -236,19 +418,41 @@ const handleExecuteJob = async (jobId: number) => {
   }
 };
 
+const fetchNextFireTimes = async () => {
+  if (!newQuartzJobForm.value.cronExpression.trim()) {
+    cronError.value = 'Cron 표현식을 입력해주세요.';
+    nextFireTimes.value = [];
+    return;
+  }
+  isLoadingNextFireTimes.value = true;
+  nextFireTimes.value = [];
+  cronError.value = '';
+  try {
+    const response = await axios.get('/quartz-jobs/preview-schedule', {
+      params: {
+        cronExpression: newQuartzJobForm.value.cronExpression.trim(),
+        numTimes: 5 // 5개의 다음 실행 시간을 가져옴
+      }
+    });
+    if (response.data && response.data.success && Array.isArray(response.data.data)) {
+      if (response.data.data.length === 0) {
+        cronError.value = '입력된 Cron 표현식에 대한 다음 실행 시간을 찾을 수 없습니다.';
+      } else {
+        nextFireTimes.value = response.data.data;
+      }
+    } else {
+      cronError.value = response.data?.message || 'Cron 표현식을 해석할 수 없거나 유효하지 않습니다.';
+    }
+  } catch (error: any) {
+    console.error("Error fetching next fire times:", error);
+    cronError.value = error.response?.data?.message || '다음 실행 시간 조회 중 오류가 발생했습니다.';
+  } finally {
+    isLoadingNextFireTimes.value = false;
+  }
+};
+
 onMounted(() => {
-  fetchquartzJobs();
-  // 모달 관련 이벤트 위임 제거
-  // $(document).on('click', 'a.action-view-parameters', function (e) {
-  //   e.preventDefault();
-  //   const jobId = $(this).data('job-id');
-  //   if (jobId) {
-  //     const job = quartzJobs.value.find(j => j.id === jobId);
-  //     if (job) {
-  //       // handleEdit(job); // handleEdit 함수가 제거됨
-  //     }
-  //   }
-  // });
+  fetchQuartzJobs();
 });
 </script>
 
@@ -270,6 +474,10 @@ onMounted(() => {
 
 .me-1 {
   margin-right: 0.25rem;
+}
+
+.me-2 {
+  margin-right: 0.5rem !important; /* Ensure spacing for the add button */
 }
 
 /* Card and other styles from SB Admin 2 theme if not globally applied */
@@ -324,7 +532,13 @@ onMounted(() => {
   margin-bottom: 0; /* Align items vertically if they wrap */
 }
 
-/* 모달 관련 스타일 제거됨 */
+.modal.fade.show {
+  display: block;
+  background-color: rgba(0,0,0,0.5);
+}
+.modal-dialog {
+  margin-top: 5rem; /* Adjust as needed */
+}
 
 .btn-circle.btn-sm {
     width: 2rem;
@@ -344,7 +558,6 @@ onMounted(() => {
     border-color: #117a8b;
 }
 
-
 /* DataTables 검색 필터 스타일 */
 .dataTables_filter {
   display: flex;
@@ -358,17 +571,37 @@ onMounted(() => {
 
 /* Custom search styles */
 #customSearchContainer .input-group {
-  /*justify-content: flex-end; /* Aligns group to the right if needed, but DataTables places it */
+  /*justify-content: flex-end; */
 }
 
 #customSearchContainer .custom-search-input {
-  /* Adjust width as needed */
-  /* flex-grow: 1; /* Allows input to take available space */
+  /* flex-grow: 1; */
 }
 
 #customSearchContainer .custom-search-button {
   /* margin-left: 0.5rem; */
 }
 
-/* custom-add-button 관련 스타일 제거됨 */
+.modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.btn-close {
+  padding: 1rem;
+  margin: -1rem -1rem -1rem auto;
+}
+
+.btn-close span {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #000;
+  text-shadow: 0 1px 0 #fff;
+  opacity: .5;
+}
+
+.btn-close:hover span {
+  opacity: .75;
+}
+
 </style>

@@ -22,9 +22,9 @@ public class QuartzBatchExecutor implements org.quartz.Job {
     public void execute(JobExecutionContext context) throws JobExecutionException {
         try {
             JobDataMap map = context.getMergedJobDataMap();
-            batchJobService.executeBatchJob(map.getLong("metaId"), "quartz");
+            batchJobService.executeBatchJob(map.getLong("batchMetaId"), "quartz");
 
-            log.info("[Quartz] Launching batch job: {}", map.getLong("metaId"));
+            log.info("[Quartz] Launching batch job: {}", map.getLong("batchMetaId"));
 
         } catch (Exception e) {
             log.error("Batch execution failed", e);
