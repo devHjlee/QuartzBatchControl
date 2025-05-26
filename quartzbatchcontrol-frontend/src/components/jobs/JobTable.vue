@@ -34,7 +34,7 @@
       <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Quartz Job 등록</h5>
+            <h5 class="modal-title">{{ isEditMode ? 'Quartz Job 수정' : 'Quartz Job 등록' }}</h5>
             <button type="button" class="btn-close" @click="closeAddQuartzJobModal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -42,7 +42,7 @@
           <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
             <div class="mb-3">
               <label class="form-label">Job Type</label>
-              <select class="form-control" v-model="newQuartzJobForm.jobType">
+              <select class="form-control" v-model="newQuartzJobForm.jobType" :disabled="isEditMode">
                 <option value="SIMPLE">SIMPLE</option>
                 <option value="BATCH">BATCH</option>
               </select>
@@ -50,12 +50,12 @@
 
             <div class="mb-3">
               <label class="form-label">Job Name</label>
-              <input type="text" class="form-control" v-model="newQuartzJobForm.jobName" placeholder="Job Name 입력">
+              <input type="text" class="form-control" v-model="newQuartzJobForm.jobName" placeholder="Job Name 입력" :readonly="isEditMode">
             </div>
 
             <div class="mb-3" v-if="newQuartzJobForm.jobType === 'BATCH'">
               <label class="form-label">Batch Meta</label>
-              <select class="form-control" v-model="newQuartzJobForm.selectedBatchMetaId" :disabled="isLoadingBatchMetas">
+              <select class="form-control" v-model="newQuartzJobForm.selectedBatchMetaId" :disabled="isLoadingBatchMetas || isEditMode">
                 <option value="" disabled>{{ isLoadingBatchMetas ? '로딩 중...' : '배치 메타를 선택하세요' }}</option>
                 <option v-for="batchMeta in availableBatchMetas" :key="batchMeta.id" :value="batchMeta.id">{{ batchMeta.metaName }} (ID: {{ batchMeta.id }})</option>
               </select>
@@ -137,8 +137,11 @@ const quartzJobs = ref<QuartzJobInfo[]>([])
 const dataTable = ref<any>(null)
 const searchInputValue = ref('');
 
-// Add Quartz Job Modal state
+// Modal state
 const showAddQuartzJobModal = ref(false);
+const isEditMode = ref(false); // 수정 모드 여부
+const currentEditingJobId = ref<number | null>(null); // 수정 중인 Job의 ID
+
 const newQuartzJobForm = ref<NewQuartzJobForm>({
   jobType: 'SIMPLE',
   jobName: '', // jobNameInput에서 jobName으로 변경
@@ -252,10 +255,14 @@ const fetchQuartzJobs = async () => {
           orderable: false,
           searchable: false,
           className: 'text-center',
-          render: function(data, type, row) {
-            return `
-              <button class="btn btn-sm btn-info action-execute" data-job-id="${row.id}">실행</button>
-            `;
+          render: function(data, type, row: QuartzJobInfo) {
+            let buttons = '';
+            buttons += `<button class="btn btn-sm btn-info btn-circle action-trigger me-1" data-job-id="${row.id}" title="즉시 실행"><i class="fas fa-play"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-success btn-circle action-resume me-1" data-job-id="${row.id}" title="재개"><i class="fas fa-play-circle"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-warning btn-circle action-pause me-1" data-job-id="${row.id}" title="일시 정지"><i class="fas fa-pause-circle"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-danger btn-circle action-delete me-1" data-job-id="${row.id}" title="삭제"><i class="fas fa-trash"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-primary btn-circle action-edit" data-job-id="${row.id}" title="수정"><i class="fas fa-edit"></i></button>`;
+            return buttons;
           }
         }
       ],
@@ -293,13 +300,44 @@ const fetchQuartzJobs = async () => {
       }
     });
 
-    $(document).off('click', '#quartzMetaTable button.action-execute').on('click', '#quartzMetaTable button.action-execute', function (e) {
+    $(document).off('click', '#quartzMetaTable button.action-trigger').on('click', '#quartzMetaTable button.action-trigger', async function (e) {
       e.preventDefault();
       const jobId = $(this).data('job-id');
-      if (jobId) {
-        if (confirm('정말로 이 작업을 실행하시겠습니까?')) {
-          handleExecuteJob(jobId);
-        }
+      if (jobId && confirm('정말로 이 작업을 즉시 실행하시겠습니까?')) {
+        await handleJobAction(`/quartz-jobs/trigger/${jobId}`, '즉시 실행');
+      }
+    });
+
+    $(document).off('click', '#quartzMetaTable button.action-resume').on('click', '#quartzMetaTable button.action-resume', async function (e) {
+      e.preventDefault();
+      const jobId = $(this).data('job-id');
+      if (jobId && confirm('정말로 이 작업을 재개하시겠습니까?')) {
+        await handleJobAction(`/quartz-jobs/resume/${jobId}`, '재개');
+      }
+    });
+
+    $(document).off('click', '#quartzMetaTable button.action-pause').on('click', '#quartzMetaTable button.action-pause', async function (e) {
+      e.preventDefault();
+      const jobId = $(this).data('job-id');
+      if (jobId && confirm('정말로 이 작업을 일시 정지하시겠습니까?')) {
+        await handleJobAction(`/quartz-jobs/pause/${jobId}`, '일시 정지');
+      }
+    });
+
+    $(document).off('click', '#quartzMetaTable button.action-delete').on('click', '#quartzMetaTable button.action-delete', async function (e) {
+      e.preventDefault();
+      const jobId = $(this).data('job-id');
+      if (jobId && confirm('정말로 이 작업을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+        await handleJobAction(`/quartz-jobs/delete/${jobId}`, '삭제');
+      }
+    });
+    
+    $(document).off('click', '#quartzMetaTable button.action-edit').on('click', '#quartzMetaTable button.action-edit', function (e) {
+      e.preventDefault();
+      const jobId = $(this).data('job-id');
+      const jobToEdit = quartzJobs.value.find(job => job.id === jobId);
+      if (jobToEdit) {
+        openEditQuartzJobModal(jobToEdit);
       }
     });
 
@@ -346,6 +384,26 @@ const openAddQuartzJobModal = () => {
   showAddQuartzJobModal.value = true;
 };
 
+const openEditQuartzJobModal = (job: QuartzJobInfo) => {
+  isEditMode.value = true;
+  currentEditingJobId.value = job.id;
+  newQuartzJobForm.value = {
+    jobType: job.jobType as 'SIMPLE' | 'BATCH', // 타입 단언
+    jobName: job.jobName,
+    selectedBatchMetaId: job.jobType === 'BATCH' ? (job.batchMetaId || '') : '', // batchMetaId는 job 객체에 존재해야 함
+    cronExpression: job.cronExpression || '' // job 객체에 cronExpression 존재해야 함
+  };
+  nextFireTimes.value = [];
+  cronError.value = '';
+
+  if (job.jobType === 'BATCH') {
+    if (availableBatchMetas.value.length === 0 && !isLoadingBatchMetas.value) {
+      fetchAvailableBatchMetas(); // BATCH 타입이면 메타 정보 로드 (이미 로드되었을 수 있음)
+    }
+  }
+  showAddQuartzJobModal.value = true;
+};
+
 const closeAddQuartzJobModal = () => {
   showAddQuartzJobModal.value = false;
 };
@@ -355,69 +413,112 @@ const handleSaveNewQuartzJob = async () => {
     alert('Job Name을 입력해주세요.');
     return;
   }
-
-  const jobName = newQuartzJobForm.value.jobName.trim();
-  let payload = {};
-
-  if (newQuartzJobForm.value.jobType === 'BATCH') {
-    if (!newQuartzJobForm.value.selectedBatchMetaId) {
-      alert('Batch Meta를 선택해주세요.');
-      return;
-    }
-    payload = {
-      jobType: 'BATCH',
-      jobName: jobName,
-      jobGroup: 'BATCH',
-      batchMetaId: newQuartzJobForm.value.selectedBatchMetaId,
-      cronExpression: newQuartzJobForm.value.cronExpression.trim(),
-      misfirePolicy: 'FIRE_AND_PROCEED',
-      eventType: 'REGISTER'
-    };
-  } else { // SIMPLE type
-    payload = {
-      jobType: 'SIMPLE',
-      jobName: jobName,
-      jobGroup: 'UTIL',
-      cronExpression: newQuartzJobForm.value.cronExpression.trim(),
-      misfirePolicy: 'FIRE_AND_PROCEED',
-      eventType: 'REGISTER'
-    };
-  }
-
-  if (!newQuartzJobForm.value.cronExpression.trim()) {
+  if (!newQuartzJobForm.value.cronExpression.trim()) { // Cron Expression 유효성 검사 위치 변경
     alert('Cron Expression을 입력해주세요.');
     return;
   }
 
-  try {
-    const response = await axios.post('/quartz-jobs', payload); // API 엔드포인트 확인 필요
-    if (response.data && response.data.success) {
-      alert('Quartz Job이 성공적으로 등록되었습니다.');
-      closeAddQuartzJobModal();
-      if (dataTable.value) {
-        dataTable.value.ajax.reload(null, false);
-      }
-    } else {
-      alert(response.data?.message || 'Quartz Job 등록에 실패했습니다.');
+  const jobName = newQuartzJobForm.value.jobName.trim();
+  const cronExpression = newQuartzJobForm.value.cronExpression.trim();
+  let payload: any = {}; // payload 타입 명시를 위해 any 사용, 실제로는 더 구체적인 타입 권장
+
+  if (isEditMode.value && currentEditingJobId.value !== null) {
+    // 수정 모드
+    const originalJob = quartzJobs.value.find(job => job.id === currentEditingJobId.value);
+    if (!originalJob) {
+        alert('수정할 작업을 찾을 수 없습니다.');
+        return;
     }
-  } catch (error: any) {
-    alert(error.response?.data?.message || 'Quartz Job 등록 중 오류가 발생했습니다.');
+    payload = {
+        id: currentEditingJobId.value,
+        jobType: newQuartzJobForm.value.jobType, // 수정 불가하지만, API 요구사항에 따라 전송
+        jobName: newQuartzJobForm.value.jobName, // 수정 불가하지만, API 요구사항에 따라 전송
+        jobGroup: newQuartzJobForm.value.jobType === 'SIMPLE' ? 'UTIL' : 'BATCH',
+        cronExpression: cronExpression, // 이 값만 변경 가능
+        misfirePolicy: 'FIRE_AND_PROCEED' // API 명세에 따라 고정값 또는 기존 값 사용
+    };
+    if (newQuartzJobForm.value.jobType === 'BATCH') {
+        if (!newQuartzJobForm.value.selectedBatchMetaId) {
+            alert('Batch Meta를 선택해주세요.');
+            return;
+        }
+        payload.batchMetaId = newQuartzJobForm.value.selectedBatchMetaId;
+    }
+
+    try {
+      // API 명세에 따라 POST 또는 PUT 사용. 여기서는 명세대로 POST
+      const response = await axios.post('/quartz-jobs/update', payload); 
+      if (response.data && response.data.success) {
+        alert('Quartz Job이 성공적으로 수정되었습니다.');
+        closeAddQuartzJobModal();
+        if (dataTable.value) {
+          dataTable.value.ajax.reload(null, false);
+        }
+      } else {
+        alert(response.data?.message || 'Quartz Job 수정에 실패했습니다.');
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Quartz Job 수정 중 오류가 발생했습니다.');
+    }
+
+  } else {
+    // 추가 모드
+    if (newQuartzJobForm.value.jobType === 'BATCH') {
+      if (!newQuartzJobForm.value.selectedBatchMetaId) {
+        alert('Batch Meta를 선택해주세요.');
+        return;
+      }
+      payload = {
+        jobType: 'BATCH',
+        jobName: jobName,
+        jobGroup: 'BATCH',
+        batchMetaId: newQuartzJobForm.value.selectedBatchMetaId,
+        cronExpression: cronExpression,
+        misfirePolicy: 'FIRE_AND_PROCEED',
+        eventType: 'REGISTER'
+      };
+    } else { // SIMPLE type
+      payload = {
+        jobType: 'SIMPLE',
+        jobName: jobName,
+        jobGroup: 'UTIL',
+        cronExpression: cronExpression,
+        misfirePolicy: 'FIRE_AND_PROCEED',
+        eventType: 'REGISTER'
+      };
+    }
+    
+    try {
+      const response = await axios.post('/quartz-jobs', payload);
+      if (response.data && response.data.success) {
+        alert('Quartz Job이 성공적으로 등록되었습니다.');
+        closeAddQuartzJobModal();
+        if (dataTable.value) {
+          dataTable.value.ajax.reload(null, false);
+        }
+      } else {
+        alert(response.data?.message || 'Quartz Job 등록에 실패했습니다.');
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Quartz Job 등록 중 오류가 발생했습니다.');
+    }
   }
 };
 
-const handleExecuteJob = async (jobId: number) => {
+// 공통 작업 처리 함수
+const handleJobAction = async (url: string, actionName: string) => {
   try {
-    const response = await axios.post(`/quartz-jobs/execute/${jobId}`); // 엔드포인트는 /quartz-jobs 기준으로 변경될 수 있음
+    const response = await axios.get(url); // 모든 액션이 GET 요청이라고 가정
     if (response.data && response.data.success) {
-      alert('작업이 성공적으로 실행 요청되었습니다.');
+      alert(`작업 ${actionName} 요청이 성공적으로 처리되었습니다.`);
       if (dataTable.value) {
-        dataTable.value.ajax.reload(null, false);
+        dataTable.value.ajax.reload(null, false); // 현재 페이징 유지하며 리로드
       }
     } else {
-      alert(response.data?.message || '작업 실행 요청에 실패했습니다.');
+      alert(response.data?.message || `작업 ${actionName} 요청에 실패했습니다.`);
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || '작업 실행 중 오류가 발생했습니다.');
+    alert(error.response?.data?.message || `작업 ${actionName} 중 오류가 발생했습니다.`);
   }
 };
 

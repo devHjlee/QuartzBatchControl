@@ -318,10 +318,14 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
           searchable: false,
           className: 'text-center',
           render: function(data, type, row) {
-            return `
-              <button class="btn btn-sm btn-primary action-edit me-1" data-job-id="${row.id}">수정</button>
-              <button class="btn btn-sm btn-info action-execute" data-job-id="${row.id}">실행</button>
-            `;
+            let buttons = '';
+            // 수정 버튼 (Font Awesome 아이콘 및 btn-circle 적용)
+            buttons += `<button class="btn btn-sm btn-primary btn-circle action-edit me-1" data-job-id="${row.id}" title="수정"><i class="fas fa-edit"></i></button>`;
+            // 실행 버튼 (Font Awesome 아이콘 및 btn-circle 적용)
+            // BatchTable의 '실행'이 Quartz의 '즉시실행'과 동일한 의미인지, 아니면 다른 의미인지 명확하지 않아 일단 play 아이콘 사용
+            // 필요시 아이콘 및 title, API 연동 수정 필요
+            buttons += `<button class="btn btn-sm btn-info btn-circle action-execute" data-job-id="${row.id}" title="실행"><i class="fas fa-play"></i></button>`;
+            return buttons;
           }
         }
       ],
