@@ -158,6 +158,7 @@
 import { onMounted, ref, nextTick, computed } from 'vue'
 import axios from '@/api/axios'
 import $ from 'jquery'
+import { useRouter } from 'vue-router'
 
 interface BatchJobMeta {
   id: number
@@ -252,6 +253,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
       pageLength: size,
       lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "전체"]],
       dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"<"#customSearchContainer">>><"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+      ordering: false, // 테이블 정렬 기능 비활성화
       language: {
         emptyTable: '조회된 데이터가 없습니다.',
         lengthMenu: '_MENU_개씩 보기',
@@ -272,8 +274,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
           params: {
             page: dtParams.start / dtParams.length,
             size: dtParams.length,
-            jobName: searchInputValue.value, // Use our reactive search input value
-            metaName: searchInputValue.value, // Use our reactive search input value
+            keyword: searchInputValue.value,
           }
         })
         .then(function (response) {
@@ -306,7 +307,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
           className: 'text-center',
           render: function(data, type, row) {
             if (data === true) {
-              return `<a href="#" class="btn btn-success btn-circle btn-sm action-view-job" data-job-id="${row.id}" title="Job 상세 보기"><i class="fas fa-check"></i></a>`;
+              return `<a href="#" class="btn btn-success btn-circle btn-sm action-view-job" data-meta-name="${row.metaName}" title="Job 상세 보기"><i class="fas fa-check"></i></a>`;
             }
             return '';
           }
@@ -318,10 +319,12 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
           searchable: false,
           className: 'text-center',
           render: function(data, type, row) {
-            return `
-              <button class="btn btn-sm btn-primary action-edit me-1" data-job-id="${row.id}">수정</button>
-              <button class="btn btn-sm btn-info action-execute" data-job-id="${row.id}">실행</button>
-            `;
+            let buttons = '';
+            // 수정 버튼 (Font Awesome 아이콘 및 btn-circle 적용)
+            buttons += `<button class="btn btn-sm btn-primary btn-circle action-edit me-1" data-job-id="${row.id}" title="수정"><i class="fas fa-edit"></i></button>`;
+            // 실행 버튼 (Font Awesome 아이콘 및 btn-circle 적용)
+            buttons += `<button class="btn btn-sm btn-info btn-circle action-execute me-1" data-job-id="${row.id}" title="실행"><i class="fas fa-play"></i></button>`; // 모든 버튼에 me-1 적용
+            return buttons;
           }
         }
       ],
@@ -355,27 +358,6 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
               handleAddNew();
             });
           }
-        }
-      }
-    });
-
-    // 수정 버튼 이벤트 바인딩 (중복 방지)
-    $(document).off('click', '#batchMetaTable button.action-edit').on('click', '#batchMetaTable button.action-edit', function (e) {
-      e.preventDefault();
-      const jobId = $(this).data('job-id');
-      const job = batchJobs.value.find(j => j.id === jobId);
-      if (job) {
-        handleEdit(job);
-      }
-    });
-
-    // 실행 버튼 이벤트 바인딩
-    $(document).off('click', '#batchMetaTable button.action-execute').on('click', '#batchMetaTable button.action-execute', function (e) {
-      e.preventDefault();
-      const jobId = $(this).data('job-id');
-      if (jobId) {
-        if (confirm('정말로 이 작업을 실행하시겠습니까?')) {
-          handleExecuteJob(jobId);
         }
       }
     });
@@ -609,17 +591,20 @@ const handleExecuteJob = async (jobId: number) => {
   }
 };
 
+const router = useRouter()
+
 onMounted(() => {
   fetchBatchJobs(currentPage.value, pageSize.value);
-  // 이벤트 위임 추가 (동적으로 생성된 버튼 대응)
-  $(document).on('click', 'a.action-view-parameters', function (e) {
+  // Quartz 연동 상세 보기 버튼 이벤트 바인딩
+  $(document).on('click', '#batchMetaTable a.action-view-job', function (e) {
     e.preventDefault();
-    const jobId = $(this).data('job-id');
-    if (jobId) {
-      const job = batchJobs.value.find(j => j.id === jobId);
-      if (job) {
-        handleEdit(job);
-      }
+    e.stopPropagation(); // 이벤트 버블링을 막습니다.
+    const metaName = $(this).data('meta-name');
+    console.log('[DEBUG BatchTable] action-view-job click. metaName:', metaName, 'Time:', new Date().toISOString()); // 라우터 푸시 직전 로그 추가
+
+    if (metaName) {
+      // console.log('[DEBUG] Navigating to Quartz 관리 with metaName:', metaName);
+      router.push({ name: 'Quartz 관리', query: { searchFromBatchTable: metaName } })
     }
   });
 });

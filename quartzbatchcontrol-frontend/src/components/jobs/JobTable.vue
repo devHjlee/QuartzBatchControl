@@ -4,18 +4,20 @@
     <!-- DataTales Example -->
     <div class="card shadow mb-4">
       <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Batch 관리</h6>
+        <h6 class="m-0 font-weight-bold text-primary">Quartz 관리</h6>
       </div>
       <div class="card-body">
         <div class="table-responsive">
-          <table id="batchMetaTable" class="table table-bordered" width="100%" cellspacing="0">
+          <table id="quartzMetaTable" class="table table-bordered" width="100%" cellspacing="0">
             <thead>
               <tr>
-                <th class="center-text">Batch Job</th>
-                <th class="center-text">Meta Name</th>
-                <th class="center-text">Description</th>
-                <th class="center-text">Parameters</th>
-                <th class="center-text">Quartz 연동</th>
+                <th class="center-text">Job Name</th>
+                <th class="center-text">Job Type</th>
+                <th class="center-text">Batch Name</th>
+                <th class="center-text">Trigger State</th>
+                <th class="center-text">Cron Expression</th>
+                <th class="center-text">Prev Fire Time</th>
+                <th class="center-text">Next Fire Time</th>
                 <th class="center-text">Created By</th>
                 <th class="center-text">Action</th>
               </tr>
@@ -28,123 +30,67 @@
       </div>
     </div>
 
-    <!-- Batch Job Modal -->
-    <div v-if="showParametersModal" class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+    <!-- Add Quartz Job Modal -->
+    <div v-if="showAddQuartzJobModal" class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
       <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">{{ currentJobIdForModal ? '배치 작업 수정' : '배치 작업 등록' }}</h5>
-            <button type="button" class="btn-close" @click="closeParametersModal" aria-label="Close">
+            <h5 class="modal-title">{{ isEditMode ? 'Quartz Job 수정' : 'Quartz Job 등록' }}</h5>
+            <button type="button" class="btn-close" @click="closeAddQuartzJobModal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
           <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
             <div class="mb-3">
-              <label class="form-label">Batch Job</label>
-              <template v-if="!currentJobIdForModal">
-                <select class="form-control" v-model="batchJobForm.jobName" :disabled="isLoadingAvailableJobs">
-                  <option value="" disabled>{{ isLoadingAvailableJobs ? '로딩 중...' : '배치 작업을 선택하세요' }}</option>
-                  <option v-for="jobName in availableBatchJobs" :key="jobName" :value="jobName">{{ jobName }}</option>
-                </select>
-                <div v-if="isLoadingAvailableJobs" class="spinner-border spinner-border-sm text-primary mt-2" role="status">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-              </template>
-              <template v-else>
-                <input type="text" class="form-control" v-model="batchJobForm.jobName" placeholder="Batch Job 입력" readonly>
-              </template>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Meta Name</label>
-              <input type="text" class="form-control" v-model="batchJobForm.metaName" placeholder="Meta Name 입력">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Description</label>
-              <textarea class="form-control" v-model="batchJobForm.jobDescription" placeholder="Description 입력"></textarea>
+              <label class="form-label">Job Type</label>
+              <select class="form-control" v-model="newQuartzJobForm.jobType" :disabled="isEditMode">
+                <option value="SIMPLE">SIMPLE</option>
+                <option value="BATCH">BATCH</option>
+              </select>
             </div>
 
             <div class="mb-3">
-              <button class="btn btn-primary" @click="handleAddParameter">파라미터 추가</button>
+              <label class="form-label">Job Name</label>
+              <input type="text" class="form-control" v-model="newQuartzJobForm.jobName" placeholder="Job Name 입력" :readonly="isEditMode">
             </div>
 
-            <table class="table table-bordered">
-              <thead>
-                <tr>
-                  <th>Key</th>
-                  <th>Type</th>
-                  <th>Value</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="isNewParameter">
-                  <td>
-                    <input type="text" class="form-control" v-model="newParameterKey" placeholder="키 입력" />
-                  </td>
-                  <td>
-                    <select class="form-control" v-model="newParameterType">
-                      <option value="String">String</option>
-                      <option value="Number">Number</option>
-                      <option value="Boolean">Boolean</option>
-                    </select>
-                  </td>
-                  <td>
-                    <template v-if="newParameterType === 'Boolean'">
-                      <select class="form-control" v-model="newParameterValue">
-                        <option value="true">true</option>
-                        <option value="false">false</option>
-                      </select>
-                    </template>
-                    <input
-                      v-else
-                      type="text"
-                      class="form-control"
-                      v-model="newParameterValue"
-                      placeholder="값 입력"
-                    />
-                  </td>
-                  <td>
-                    <button class="btn btn-sm btn-success me-1" @click="confirmAddParameter">확인</button>
-                    <button class="btn btn-sm btn-secondary" @click="cancelAddParameter">취소</button>
-                  </td>
-                </tr>
-                <tr v-for="(value, key) in parsedParameters" :key="key">
-                  <td>{{ key }}</td>
-                  <td>
-                    <select class="form-control" v-model="parameterTypes[key]" @change="updateParameterType(key)">
-                      <option value="String">String</option>
-                      <option value="Number">Number</option>
-                      <option value="Boolean">Boolean</option>
-                    </select>
-                  </td>
-                  <td>
-                    <template v-if="parameterTypes[key] === 'Boolean'">
-                      <select class="form-control" :value="value" @change="updateParameterValue(key, $event)">
-                        <option value="true">true</option>
-                        <option value="false">false</option>
-                      </select>
-                    </template>
-                    <input
-                      v-else
-                      type="text"
-                      class="form-control"
-                      :value="value"
-                      @input="updateParameterValue(key, $event)"
-                    />
-                  </td>
-                  <td>
-                    <button class="btn btn-sm btn-danger" @click="handleDeleteParameter(key)">삭제</button>
-                  </td>
-                </tr>
-                <tr v-if="!parsedParameters || Object.keys(parsedParameters).length === 0">
-                  <td colspan="4" class="text-center">파라미터가 없습니다.</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="mb-3" v-if="newQuartzJobForm.jobType === 'BATCH'">
+              <label class="form-label">Batch Meta</label>
+              <select class="form-control" v-model="newQuartzJobForm.selectedBatchMetaId" :disabled="isLoadingBatchMetas || isEditMode">
+                <option value="" disabled>{{ isLoadingBatchMetas ? '로딩 중...' : '배치 메타를 선택하세요' }}</option>
+                <option v-for="batchMeta in availableBatchMetas" :key="batchMeta.id" :value="batchMeta.id">{{ batchMeta.metaName }} (ID: {{ batchMeta.id }})</option>
+              </select>
+              <div v-if="isLoadingBatchMetas" class="spinner-border spinner-border-sm text-primary mt-2" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Quartz Cron Expression</label>
+              <div class="input-group">
+                <input type="text" class="form-control" v-model="newQuartzJobForm.cronExpression" placeholder="e.g., 0 0/2 * * * ?">
+                <button class="btn btn-outline-secondary" type="button" @click="fetchNextFireTimes" :disabled="isLoadingNextFireTimes">
+                  <span v-if="isLoadingNextFireTimes" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  {{ isLoadingNextFireTimes ? '확인 중...' : '다음 실행 시간 확인' }}
+                </button>
+              </div>
+              <div v-if="nextFireTimes.length > 0 && !isLoadingNextFireTimes && !cronError" class="mt-2 mb-0">
+                <p class="form-text mb-1"><strong>다음 실행 예정 시간:</strong></p>
+                <ul class="list-group list-group-flush">
+                  <li v-for="(time, index) in nextFireTimes" :key="index" class="list-group-item py-1 px-0 form-text">
+                    {{ formatTime(time) }}
+                  </li>
+                </ul>
+              </div>
+              <div v-if="cronError && !isLoadingNextFireTimes" class="mt-2 text-danger form-text">
+                {{ cronError }}
+              </div>
+            </div>
+
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeParametersModal">취소</button>
-            <button type="button" class="btn btn-primary" @click="handleSaveBatchJob">저장</button>
+            <button type="button" class="btn btn-secondary" @click="closeAddQuartzJobModal">취소</button>
+            <button type="button" class="btn btn-primary" @click="handleSaveNewQuartzJob">저장</button>
           </div>
         </div>
       </div>
@@ -155,102 +101,108 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, nextTick, computed } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import axios from '@/api/axios'
 import $ from 'jquery'
 
-interface BatchJobMeta {
-  id: number
-  jobName: string
-  metaName: string
-  jobDescription: string
-  jobParameters: boolean
-  registeredInQuartz: boolean
-  createdBy: string
-  // createdAt: string // Removed as per request
+interface QuartzJobInfo {
+  id: number;
+  jobName: string;
+  jobGroup: string;
+  jobType: string;
+  eventType: string;
+  batchMetaId: number;
+  triggerName: string;
+  triggerGroup: string;
+  nextFireTime: number;
+  prevFireTime: number;
+  triggerState: string;
+  cronExpression: string;
+  batchName: string;
+  createdBy: string;
 }
 
-interface PageResponse {
-  content: BatchJobMeta[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
+interface BatchMetaInfo {
+  id: number;
+  metaName: string;
+  // 필요에 따라 다른 필드 추가 가능
 }
 
-interface BatchJobForm {
-  jobName: string
-  metaName: string
-  jobDescription: string
+interface NewQuartzJobForm {
+  jobType: 'SIMPLE' | 'BATCH';
+  jobName: string; // 사용자 입력 Job Name
+  selectedBatchMetaId: number | string; // BATCH일 때 선택된 배치작업의 ID
+  cronExpression: string;
 }
 
-const batchJobs = ref<BatchJobMeta[]>([])
+const quartzJobs = ref<QuartzJobInfo[]>([])
 const dataTable = ref<any>(null)
-const currentPage = ref(0)
-const pageSize = ref(10)
-const totalElements = ref(0)
+const searchInputValue = ref('');
 
 // Modal state
-const showParametersModal = ref(false)
-const currentJobParameters = ref<any | null>(null)
-const isLoadingParameters = ref(false)
-const currentJobIdForModal = ref<number | null>(null)
-const isNewParameter = ref(false)
-const newParameterKey = ref('')
-const newParameterValue = ref('')
-const newParameterType = ref('String')
-const parameterTypes = ref<Record<string, string>>({})
-const parsedParameters = ref<Record<string, any>>({})
-const batchJobForm = ref<BatchJobForm>({
-  jobName: '',
-  metaName: '',
-  jobDescription: ''
-})
+const showAddQuartzJobModal = ref(false);
+const isEditMode = ref(false); // 수정 모드 여부
+const currentEditingJobId = ref<number | null>(null); // 수정 중인 Job의 ID
 
-const searchInputValue = ref(''); // To store search input
+const newQuartzJobForm = ref<NewQuartzJobForm>({
+  jobType: 'SIMPLE',
+  jobName: '', // jobNameInput에서 jobName으로 변경
+  selectedBatchMetaId: '',
+  cronExpression: ''
+});
+const availableBatchMetas = ref<BatchMetaInfo[]>([]);
+const isLoadingBatchMetas = ref(false);
+const nextFireTimes = ref<number[]>([]);
+const isLoadingNextFireTimes = ref(false);
+const cronError = ref('');
 
-const availableBatchJobs = ref<string[]>([])
-const isLoadingAvailableJobs = ref(false)
+const route = useRoute(); // 현재 라우트 정보
+const router = useRouter(); // 라우터 인스턴스
 
-const getTypeFromValue = (value: any): string => {
-  if (typeof value === 'boolean') return 'Boolean';
-  if (typeof value === 'number') return 'Number';
-  return 'String';
-}
-
-const convertValueByType = (value: any, type: string): any => {
-  switch (type) {
-    case 'Number':
-      return Number(value);
-    case 'Boolean':
-      return value === 'true';
-    default:
-      return String(value);
+watch(() => newQuartzJobForm.value.jobType, (newType) => {
+  if (newType === 'SIMPLE') {
+    newQuartzJobForm.value.selectedBatchMetaId = ''; // SIMPLE 타입으로 변경 시, 선택된 배치 메타 ID 초기화
+  } else { // BATCH 타입
+    // jobName은 이제 직접 입력이므로 BATCH 타입으로 변경 시 초기화하지 않음
+    if (availableBatchMetas.value.length === 0 && !isLoadingBatchMetas.value) {
+      fetchAvailableBatchMetas();
+    }
   }
+});
+
+const formatTime = (timestamp: number): string => {
+  if (!timestamp) return '-'
+  return new Date(timestamp).toLocaleString()
 }
 
-const formatTime = (time: string): string => {
-  if (!time) return '-'
-  return new Date(time).toLocaleString()
-}
-
-const fetchBatchJobs = async (page = 0, size = 10) => {
+const fetchQuartzJobs = async () => {
   try {
-    await nextTick()
-
     if (dataTable.value) {
       dataTable.value.destroy()
     }
 
-    dataTable.value = window.jQuery('#batchMetaTable').DataTable({
+    // 라우트 쿼리에서 searchFromBatchTable 값을 읽어 searchInputValue에 설정
+    if (route.query.searchFromBatchTable && typeof route.query.searchFromBatchTable === 'string') {
+      searchInputValue.value = route.query.searchFromBatchTable;
+      // 검색 후에는 URL에서 쿼리 파라미터를 제거하여 사용자가 직접 검색어를 변경하거나
+      // 페이지를 새로고침했을 때 이전 검색어가 유지되지 않도록 함 (선택적)
+      const currentPath = route.path;
+      const currentQuery = { ...route.query };
+      delete currentQuery.searchFromBatchTable;
+      router.replace({ path: currentPath, query: currentQuery });
+    }
+
+    dataTable.value = window.jQuery('#quartzMetaTable').DataTable({
       paging: true,
-      searching: false, // Disable DataTables default search, we'll use a custom one
+      searching: false,
       info: true,
       responsive: true,
       serverSide: true,
       processing: true,
-      pageLength: size,
-      lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "전체"]],
+      ordering: false, // 테이블 정렬 기능 비활성화
+      pageLength: 10,
+      lengthMenu: [[10, 20, 50, -1], [10, 20, 50, "전체"]],
       dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"<"#customSearchContainer">>><"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
       language: {
         emptyTable: '조회된 데이터가 없습니다.',
@@ -268,60 +220,67 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
         processing: '데이터를 불러오는 중...',
       },
       ajax: function (dtParams, callback, settings) {
-        axios.get('/batch', {
+        axios.get('/quartz-jobs', {
           params: {
             page: dtParams.start / dtParams.length,
             size: dtParams.length,
-            jobName: searchInputValue.value, // Use our reactive search input value
-            metaName: searchInputValue.value, // Use our reactive search input value
+            keyword: searchInputValue.value,
           }
         })
         .then(function (response) {
-          const backendPayload = response.data.data;
-          if (backendPayload && backendPayload.page && Array.isArray(backendPayload.content)) {
-            batchJobs.value = backendPayload.content;
+          const backendResponse = response.data;
+          if (backendResponse.success && backendResponse.data && backendResponse.data.content && backendResponse.data.page) {
+            quartzJobs.value = backendResponse.data.content;
             callback({
               draw: dtParams.draw,
-              recordsTotal: backendPayload.page.totalElements,
-              recordsFiltered: backendPayload.page.totalElements,
-              data: backendPayload.content
+              recordsTotal: backendResponse.data.page.totalElements,
+              recordsFiltered: backendResponse.data.page.totalElements,
+              data: backendResponse.data.content
             });
           } else {
+            console.error("Invalid API response structure:", backendResponse);
             callback({ draw: dtParams.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
           }
         })
-        .catch(function () {
+        .catch(function (error) {
+          console.error("API error:", error);
           callback({ draw: dtParams.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
         });
       },
       columns: [
         { data: 'jobName' },
-        { data: 'metaName' },
-        { data: 'jobDescription', defaultContent: '-' },
-        { data: 'jobParameterSize', className: 'text-center' },
+        { data: 'jobType', className: 'text-center' },
+        { data: 'batchName' },
+        { data: 'triggerState', className: 'text-center' },
+        { data: 'cronExpression', className: 'text-center' },
         {
-          data: 'registeredInQuartz',
-          orderable: false,
-          searchable: false,
+          data: 'prevFireTime',
           className: 'text-center',
-          render: function(data, type, row) {
-            if (data === true) {
-              return `<a href="#" class="btn btn-success btn-circle btn-sm action-view-job" data-job-id="${row.id}" title="Job 상세 보기"><i class="fas fa-check"></i></a>`;
-            }
-            return '';
+          render: function(data) {
+            return formatTime(data);
           }
         },
-        { data: 'createdBy' },
+        {
+          data: 'nextFireTime',
+          className: 'text-center',
+          render: function(data) {
+            return formatTime(data);
+          }
+        },
+        { data: 'createdBy', className: 'text-center' },
         {
           data: null,
           orderable: false,
           searchable: false,
           className: 'text-center',
-          render: function(data, type, row) {
-            return `
-              <button class="btn btn-sm btn-primary action-edit me-1" data-job-id="${row.id}">수정</button>
-              <button class="btn btn-sm btn-info action-execute" data-job-id="${row.id}">실행</button>
-            `;
+          render: function(data, type, row: QuartzJobInfo) {
+            let buttons = '';
+            buttons += `<button class="btn btn-sm btn-info btn-circle action-trigger me-1" data-job-id="${row.id}" title="즉시 실행"><i class="fas fa-play"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-success btn-circle action-resume me-1" data-job-id="${row.id}" title="재개"><i class="fas fa-play-circle"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-warning btn-circle action-pause me-1" data-job-id="${row.id}" title="일시 정지"><i class="fas fa-pause-circle"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-danger btn-circle action-delete me-1" data-job-id="${row.id}" title="삭제"><i class="fas fa-trash"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-primary btn-circle action-edit" data-job-id="${row.id}" title="수정"><i class="fas fa-edit"></i></button>`;
+            return buttons;
           }
         }
       ],
@@ -330,9 +289,9 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
         if (customSearchContainer) {
           customSearchContainer.innerHTML = `
             <div class="input-group">
-              <input type="text" class="form-control custom-search-input" placeholder="검색">
-              <button class="btn btn-outline-secondary custom-search-button" type="button">검색</button>
-              <button class="btn btn-primary ms-2 custom-add-button" type="button">추가</button>
+              <input type="text" class="form-control custom-search-input" placeholder="Job Name 검색">
+              <button class="btn btn-outline-secondary custom-search-button me-2" type="button">검색</button>
+              <button class="btn btn-primary custom-add-button" type="button">추가</button>
             </div>
           `;
 
@@ -348,280 +307,291 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
               }
             });
             searchButton.addEventListener('click', () => {
-              searchInputValue.value = searchInput.value; // Ensure value is updated before reload
+              searchInputValue.value = searchInput.value;
               dataTable.value.ajax.reload();
             });
             addButton.addEventListener('click', () => {
-              handleAddNew();
+              openAddQuartzJobModal();
             });
           }
         }
       }
     });
 
-    // 수정 버튼 이벤트 바인딩 (중복 방지)
-    $(document).off('click', '#batchMetaTable button.action-edit').on('click', '#batchMetaTable button.action-edit', function (e) {
+    $(document).off('click', '#quartzMetaTable button.action-trigger').on('click', '#quartzMetaTable button.action-trigger', async function (e) {
       e.preventDefault();
       const jobId = $(this).data('job-id');
-      const job = batchJobs.value.find(j => j.id === jobId);
-      if (job) {
-        handleEdit(job);
+      if (jobId && confirm('정말로 이 작업을 즉시 실행하시겠습니까?')) {
+        await handleJobAction(`/quartz-jobs/trigger/${jobId}`, '즉시 실행');
       }
     });
 
-    // 실행 버튼 이벤트 바인딩
-    $(document).off('click', '#batchMetaTable button.action-execute').on('click', '#batchMetaTable button.action-execute', function (e) {
+    $(document).off('click', '#quartzMetaTable button.action-resume').on('click', '#quartzMetaTable button.action-resume', async function (e) {
       e.preventDefault();
       const jobId = $(this).data('job-id');
-      if (jobId) {
-        if (confirm('정말로 이 작업을 실행하시겠습니까?')) {
-          handleExecuteJob(jobId);
-        }
+      if (jobId && confirm('정말로 이 작업을 재개하시겠습니까?')) {
+        await handleJobAction(`/quartz-jobs/resume/${jobId}`, '재개');
+      }
+    });
+
+    $(document).off('click', '#quartzMetaTable button.action-pause').on('click', '#quartzMetaTable button.action-pause', async function (e) {
+      e.preventDefault();
+      const jobId = $(this).data('job-id');
+      if (jobId && confirm('정말로 이 작업을 일시 정지하시겠습니까?')) {
+        await handleJobAction(`/quartz-jobs/pause/${jobId}`, '일시 정지');
+      }
+    });
+
+    $(document).off('click', '#quartzMetaTable button.action-delete').on('click', '#quartzMetaTable button.action-delete', async function (e) {
+      e.preventDefault();
+      const jobId = $(this).data('job-id');
+      if (jobId && confirm('정말로 이 작업을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+        await handleJobAction(`/quartz-jobs/delete/${jobId}`, '삭제');
+      }
+    });
+    
+    $(document).off('click', '#quartzMetaTable button.action-edit').on('click', '#quartzMetaTable button.action-edit', function (e) {
+      e.preventDefault();
+      const jobId = $(this).data('job-id');
+      const jobToEdit = quartzJobs.value.find(job => job.id === jobId);
+      if (jobToEdit) {
+        openEditQuartzJobModal(jobToEdit);
       }
     });
 
   } catch (err) {
-    console.error('배치 작업 메타 조회 또는 DataTable 초기화 실패', err)
+    console.error('Quartz 작업 조회 또는 DataTable 초기화 실패', err)
   }
 }
 
-const handleEdit = async (job: BatchJobMeta) => {
-  currentJobIdForModal.value = job.id;
-  showParametersModal.value = true;
-  isLoadingParameters.value = true;
-
-  batchJobForm.value = { jobName: '', metaName: '', jobDescription: '' };
-  parsedParameters.value = {};
-  parameterTypes.value = {};
-  isNewParameter.value = false;
-  availableBatchJobs.value = [];
-
+const fetchAvailableBatchMetas = async () => {
+  isLoadingBatchMetas.value = true;
   try {
-    const response = await axios.get(`/batch/${job.id}`);
-    if (response.data && response.data.success) {
-      const jobDetails = response.data.data;
-      batchJobForm.value = {
-        jobName: jobDetails.jobName,
-        metaName: jobDetails.metaName,
-        jobDescription: jobDetails.jobDescription
-      };
-
-      if (jobDetails.jobParameters) {
-        try {
-          const params = typeof jobDetails.jobParameters === 'string'
-            ? JSON.parse(jobDetails.jobParameters)
-            : jobDetails.jobParameters;
-
-          parsedParameters.value = params;
-          Object.entries(params).forEach(([key, value]) => {
-            parameterTypes.value[key] = getTypeFromValue(value);
-          });
-        } catch (e) {
-          alert('파라미터 정보를 파싱하는데 실패했습니다.');
-        }
-      }
-    } else {
-      alert(response.data?.message || '배치 상세 정보를 불러오는데 실패했습니다.');
-      closeParametersModal();
-    }
-  } catch (error) {
-    alert('배치 상세 정보 조회 중 오류가 발생했습니다.');
-    closeParametersModal();
-  } finally {
-    isLoadingParameters.value = false;
-  }
-}
-
-const handleAddNew = async () => {
-  currentJobIdForModal.value = null;
-  batchJobForm.value = { jobName: '', metaName: '', jobDescription: '' };
-  parsedParameters.value = {};
-  parameterTypes.value = {};
-  isNewParameter.value = false;
-
-  isLoadingAvailableJobs.value = true;
-  availableBatchJobs.value = [];
-
-  try {
-    const response = await axios.get('/batch/available');
+    const response = await axios.get('/batch/all'); // API 엔드포인트 확인 필요
     if (response.data && response.data.success && Array.isArray(response.data.data)) {
-      availableBatchJobs.value = response.data.data;
-      if (availableBatchJobs.value.length > 0) {
-        // batchJobForm.value.jobName = availableBatchJobs.value[0];
-      }
+      availableBatchMetas.value = response.data.data.map(item => ({ id: item.id, metaName: item.metaName }));
+      // BATCH 타입이 기본 선택이고, 데이터 로드 후 첫번째 항목 자동 선택 (선택사항)
+      // if (newQuartzJobForm.value.jobType === 'BATCH' && availableBatchMetas.value.length > 0 && !newQuartzJobForm.value.selectedBatchMetaId) {
+      //   newQuartzJobForm.value.selectedBatchMetaId = availableBatchMetas.value[0].id;
+      // }
     } else {
-      console.error('Failed to load available batch jobs or malformed response:', response.data);
+      console.error('Failed to load available batch metas or malformed response:', response.data);
       alert('사용 가능한 배치 작업 목록을 불러오는데 실패했습니다.');
+      availableBatchMetas.value = []; // 실패 시 빈 배열로 초기화
     }
   } catch (error) {
-    console.error('Error fetching available batch jobs:', error);
+    console.error('Error fetching available batch metas:', error);
     alert('사용 가능한 배치 작업 목록 조회 중 오류가 발생했습니다.');
+    availableBatchMetas.value = []; // 에러 시 빈 배열로 초기화
   } finally {
-    isLoadingAvailableJobs.value = false;
+    isLoadingBatchMetas.value = false;
+  }
+};
+
+const openAddQuartzJobModal = () => {
+  newQuartzJobForm.value = {
+    jobType: 'SIMPLE',
+    jobName: '', // jobNameInput에서 jobName으로 변경
+    selectedBatchMetaId: '',
+    cronExpression: ''
+  };
+  availableBatchMetas.value = []; // 모달 열 때마다 이전 목록 초기화
+  nextFireTimes.value = []; // 모달 열 때 다음 실행 시간 초기화
+  cronError.value = '';      // 모달 열 때 에러 메시지 초기화
+  // SIMPLE 타입이 기본이므로, BATCH 메타 정보는 BATCH 타입 선택 시 로드 (watch 로직에서 처리)
+  showAddQuartzJobModal.value = true;
+};
+
+const openEditQuartzJobModal = (job: QuartzJobInfo) => {
+  isEditMode.value = true;
+  currentEditingJobId.value = job.id;
+  newQuartzJobForm.value = {
+    jobType: job.jobType as 'SIMPLE' | 'BATCH', // 타입 단언
+    jobName: job.jobName,
+    selectedBatchMetaId: job.jobType === 'BATCH' ? (job.batchMetaId || '') : '', // batchMetaId는 job 객체에 존재해야 함
+    cronExpression: job.cronExpression || '' // job 객체에 cronExpression 존재해야 함
+  };
+  nextFireTimes.value = [];
+  cronError.value = '';
+
+  if (job.jobType === 'BATCH') {
+    if (availableBatchMetas.value.length === 0 && !isLoadingBatchMetas.value) {
+      fetchAvailableBatchMetas(); // BATCH 타입이면 메타 정보 로드 (이미 로드되었을 수 있음)
+    }
+  }
+  showAddQuartzJobModal.value = true;
+};
+
+const closeAddQuartzJobModal = () => {
+  showAddQuartzJobModal.value = false;
+};
+
+const handleSaveNewQuartzJob = async () => {
+  if (!newQuartzJobForm.value.jobName.trim()) {
+    alert('Job Name을 입력해주세요.');
+    return;
+  }
+  if (!newQuartzJobForm.value.cronExpression.trim()) { // Cron Expression 유효성 검사 위치 변경
+    alert('Cron Expression을 입력해주세요.');
+    return;
   }
 
-  showParametersModal.value = true;
-}
+  const jobName = newQuartzJobForm.value.jobName.trim();
+  const cronExpression = newQuartzJobForm.value.cronExpression.trim();
+  let payload: any = {}; // payload 타입 명시를 위해 any 사용, 실제로는 더 구체적인 타입 권장
 
-const handleSaveBatchJob = async () => {
-  try {
-    const data = {
-      id: currentJobIdForModal.value,
-      ...batchJobForm.value,
-      jobParameters: parsedParameters.value
+  if (isEditMode.value && currentEditingJobId.value !== null) {
+    // 수정 모드
+    const originalJob = quartzJobs.value.find(job => job.id === currentEditingJobId.value);
+    if (!originalJob) {
+        alert('수정할 작업을 찾을 수 없습니다.');
+        return;
+    }
+    payload = {
+        id: currentEditingJobId.value,
+        jobType: newQuartzJobForm.value.jobType, // 수정 불가하지만, API 요구사항에 따라 전송
+        jobName: newQuartzJobForm.value.jobName, // 수정 불가하지만, API 요구사항에 따라 전송
+        jobGroup: newQuartzJobForm.value.jobType === 'SIMPLE' ? 'UTIL' : 'BATCH',
+        cronExpression: cronExpression, // 이 값만 변경 가능
+        misfirePolicy: 'FIRE_AND_PROCEED' // API 명세에 따라 고정값 또는 기존 값 사용
     };
-
-    if (currentJobIdForModal.value) {
-      await axios.put(`/batch`, data);
-    } else {
-      await axios.post('/batch', data);
+    if (newQuartzJobForm.value.jobType === 'BATCH') {
+        if (!newQuartzJobForm.value.selectedBatchMetaId) {
+            alert('Batch Meta를 선택해주세요.');
+            return;
+        }
+        payload.batchMetaId = newQuartzJobForm.value.selectedBatchMetaId;
     }
 
-    alert('저장되었습니다.');
-    closeParametersModal();
-    fetchBatchJobs();
-  } catch (error) {
-    alert(error.response?.data?.message || '작업 실행 중 오류가 발생했습니다.');
-  }
-}
-
-const closeParametersModal = () => {
-  showParametersModal.value = false;
-  currentJobParameters.value = null;
-  currentJobIdForModal.value = null;
-  parsedParameters.value = {};
-  parameterTypes.value = {};
-}
-
-const handleAddParameter = () => {
-  isNewParameter.value = true;
-  newParameterKey.value = '';
-  newParameterValue.value = '';
-  newParameterType.value = 'String';
-}
-
-const confirmAddParameter = () => {
-  if (!newParameterKey.value.trim()) {
-    alert('키를 입력해주세요.');
-    return;
-  }
-
-  if (parsedParameters.value && newParameterKey.value in parsedParameters.value) {
-    alert('이미 존재하는 키입니다.');
-    return;
-  }
-
-  if (newParameterType.value === 'Number' && isNaN(Number(newParameterValue.value))) {
-    alert('숫자만 입력 가능합니다.');
-    return;
-  }
-
-  if (parsedParameters.value) {
-    const convertedValue = convertValueByType(newParameterValue.value, newParameterType.value);
-    parsedParameters.value[newParameterKey.value] = convertedValue;
-    parameterTypes.value[newParameterKey.value] = newParameterType.value;
-  }
-
-  isNewParameter.value = false;
-  newParameterKey.value = '';
-  newParameterValue.value = '';
-  newParameterType.value = 'String';
-}
-
-const cancelAddParameter = () => {
-  isNewParameter.value = false;
-  newParameterKey.value = '';
-  newParameterValue.value = '';
-}
-
-const handleDeleteParameter = (key: string) => {
-  console.log('handleDeleteParameter', key);
-  if (parsedParameters.value) {
-    const copy = { ...parsedParameters.value };
-    delete copy[key];
-    delete parameterTypes.value[key];
-    parsedParameters.value = copy;
-  }
-}
-
-const handleSaveAllParameters = async () => {
-  const jobIdToSave = currentJobIdForModal.value;
-
-  if (jobIdToSave === null) {
-    console.error("Cannot save parameters, Job ID is missing.");
-    alert("저장 중 오류 발생: Job ID를 찾을 수 없습니다.");
-    return;
-  }
-
-  try {
-    const response = await axios.post('/batch/update/parameter', {
-      id: jobIdToSave,
-      jobParameters: parsedParameters.value
-    });
-
-    if (response.data && response.data.success) {
-      alert('파라미터가 성공적으로 저장되었습니다.');
-      closeParametersModal();
-    } else {
-      alert('파라미터 저장에 실패했습니다.');
+    try {
+      // API 명세에 따라 POST 또는 PUT 사용. 여기서는 명세대로 POST
+      const response = await axios.post('/quartz-jobs/update', payload); 
+      if (response.data && response.data.success) {
+        alert('Quartz Job이 성공적으로 수정되었습니다.');
+        closeAddQuartzJobModal();
+        if (dataTable.value) {
+          dataTable.value.ajax.reload(null, false);
+        }
+      } else {
+        alert(response.data?.message || 'Quartz Job 수정에 실패했습니다.');
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Quartz Job 수정 중 오류가 발생했습니다.');
     }
-  } catch (error) {
-    console.error("Error saving parameters:", error);
-    alert('파라미터 저장 중 오류가 발생했습니다.');
-  }
-}
 
-const updateParameterType = (key: string) => {
-  if (parsedParameters.value && key in parsedParameters.value) {
-    const currentValue = parsedParameters.value[key];
-    parsedParameters.value[key] = convertValueByType(currentValue, parameterTypes.value[key]);
-  }
-}
-
-const updateParameterValue = (key: string, event: Event) => {
-  const target = event.target as HTMLInputElement;
-  if (parsedParameters.value) {
-    const value = target.value;
-
-    if (parameterTypes.value[key] === 'Number') {
-      if (isNaN(Number(value))) {
-        alert('숫자만 입력 가능합니다.');
+  } else {
+    // 추가 모드
+    if (newQuartzJobForm.value.jobType === 'BATCH') {
+      if (!newQuartzJobForm.value.selectedBatchMetaId) {
+        alert('Batch Meta를 선택해주세요.');
         return;
       }
+      payload = {
+        jobType: 'BATCH',
+        jobName: jobName,
+        jobGroup: 'BATCH',
+        batchMetaId: newQuartzJobForm.value.selectedBatchMetaId,
+        cronExpression: cronExpression,
+        misfirePolicy: 'FIRE_AND_PROCEED',
+        eventType: 'REGISTER'
+      };
+    } else { // SIMPLE type
+      payload = {
+        jobType: 'SIMPLE',
+        jobName: jobName,
+        jobGroup: 'UTIL',
+        cronExpression: cronExpression,
+        misfirePolicy: 'FIRE_AND_PROCEED',
+        eventType: 'REGISTER'
+      };
     }
-
-    parsedParameters.value[key] = convertValueByType(value, parameterTypes.value[key]);
+    
+    try {
+      const response = await axios.post('/quartz-jobs', payload);
+      if (response.data && response.data.success) {
+        alert('Quartz Job이 성공적으로 등록되었습니다.');
+        closeAddQuartzJobModal();
+        if (dataTable.value) {
+          dataTable.value.ajax.reload(null, false);
+        }
+      } else {
+        alert(response.data?.message || 'Quartz Job 등록에 실패했습니다.');
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Quartz Job 등록 중 오류가 발생했습니다.');
+    }
   }
-}
+};
 
-const handleExecuteJob = async (jobId: number) => {
+// 공통 작업 처리 함수
+const handleJobAction = async (url: string, actionName: string) => {
   try {
-    const response = await axios.post(`/batch/execute/${jobId}`);
+    const response = await axios.get(url); // 모든 액션이 GET 요청이라고 가정
     if (response.data && response.data.success) {
-      alert('작업이 성공적으로 실행 요청되었습니다.');
-      // Optionally, refresh the table or update UI
-      // fetchBatchJobs();
+      alert(`작업 ${actionName} 요청이 성공적으로 처리되었습니다.`);
+      if (dataTable.value) {
+        dataTable.value.ajax.reload(null, false); // 현재 페이징 유지하며 리로드
+      }
     } else {
-      alert(response.data?.message || '작업 실행 요청에 실패했습니다.');
+      alert(response.data?.message || `작업 ${actionName} 요청에 실패했습니다.`);
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || '작업 실행 중 오류가 발생했습니다.');
+    alert(error.response?.data?.message || `작업 ${actionName} 중 오류가 발생했습니다.`);
+  }
+};
+
+const fetchNextFireTimes = async () => {
+  if (!newQuartzJobForm.value.cronExpression.trim()) {
+    cronError.value = 'Cron 표현식을 입력해주세요.';
+    nextFireTimes.value = [];
+    return;
+  }
+  isLoadingNextFireTimes.value = true;
+  nextFireTimes.value = [];
+  cronError.value = '';
+  try {
+    const response = await axios.get('/quartz-jobs/preview-schedule', {
+      params: {
+        cronExpression: newQuartzJobForm.value.cronExpression.trim(),
+        numTimes: 5 // 5개의 다음 실행 시간을 가져옴
+      }
+    });
+    if (response.data && response.data.success && Array.isArray(response.data.data)) {
+      if (response.data.data.length === 0) {
+        cronError.value = '입력된 Cron 표현식에 대한 다음 실행 시간을 찾을 수 없습니다.';
+      } else {
+        nextFireTimes.value = response.data.data;
+      }
+    } else {
+      cronError.value = response.data?.message || 'Cron 표현식을 해석할 수 없거나 유효하지 않습니다.';
+    }
+  } catch (error: any) {
+    console.error("Error fetching next fire times:", error);
+    cronError.value = error.response?.data?.message || '다음 실행 시간 조회 중 오류가 발생했습니다.';
+  } finally {
+    isLoadingNextFireTimes.value = false;
   }
 };
 
 onMounted(() => {
-  fetchBatchJobs(currentPage.value, pageSize.value);
-  // 이벤트 위임 추가 (동적으로 생성된 버튼 대응)
-  $(document).on('click', 'a.action-view-parameters', function (e) {
-    e.preventDefault();
-    const jobId = $(this).data('job-id');
-    if (jobId) {
-      const job = batchJobs.value.find(j => j.id === jobId);
-      if (job) {
-        handleEdit(job);
-      }
+  fetchQuartzJobs();
+
+  // 라우트 쿼리가 변경될 때마다 테이블을 다시 로드 (searchFromBatchTable 쿼리가 있을 경우)
+  watch(() => route.query.searchFromBatchTable, (newSearchTerm) => {
+    if (newSearchTerm && typeof newSearchTerm === 'string') {
+      searchInputValue.value = newSearchTerm;
+      fetchQuartzJobs();
+      // 검색 후에는 URL에서 쿼리 파라미터를 제거
+      const currentPath = route.path;
+      const currentQuery = { ...route.query };
+      delete currentQuery.searchFromBatchTable;
+      router.replace({ path: currentPath, query: currentQuery });
+    } else if (!newSearchTerm && searchInputValue.value !== '') {
+      // searchFromBatchTable 쿼리가 없어졌지만, 기존 검색어가 남아있는 경우 (예: 사용자가 직접 검색창을 지웠을 때)
+      // 이 경우는 fetchQuartzJobs가 검색창의 searchInputValue.value를 사용하므로 별도 처리 불필요
+      // 하지만, 만약 URL 쿼리 제거 후 즉시 테이블을 초기 상태로 되돌리고 싶다면 여기서 fetchQuartzJobs() 호출 가능
     }
-  });
+  }, { immediate: true }); // 컴포넌트 마운트 시 즉시 실행
 });
 </script>
 
@@ -643,6 +613,10 @@ onMounted(() => {
 
 .me-1 {
   margin-right: 0.25rem;
+}
+
+.me-2 {
+  margin-right: 0.5rem !important; /* Ensure spacing for the add button */
 }
 
 /* Card and other styles from SB Admin 2 theme if not globally applied */
@@ -723,7 +697,30 @@ onMounted(() => {
     border-color: #117a8b;
 }
 
-/* 모달 스타일 추가 */
+/* DataTables 검색 필터 스타일 */
+.dataTables_filter {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dataTables_filter input {
+  margin-right: 0.5rem;
+}
+
+/* Custom search styles */
+#customSearchContainer .input-group {
+  /*justify-content: flex-end; */
+}
+
+#customSearchContainer .custom-search-input {
+  /* flex-grow: 1; */
+}
+
+#customSearchContainer .custom-search-button {
+  /* margin-left: 0.5rem; */
+}
+
 .modal-body {
   max-height: 70vh;
   overflow-y: auto;
@@ -746,32 +743,4 @@ onMounted(() => {
   opacity: .75;
 }
 
-/* DataTables 검색 필터 스타일 */
-.dataTables_filter {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.dataTables_filter input {
-  margin-right: 0.5rem;
-}
-
-/* Custom search styles */
-#customSearchContainer .input-group {
-  /*justify-content: flex-end; /* Aligns group to the right if needed, but DataTables places it */
-}
-
-#customSearchContainer .custom-search-input {
-  /* Adjust width as needed */
-  /* flex-grow: 1; /* Allows input to take available space */
-}
-
-#customSearchContainer .custom-search-button {
-  /* margin-left: 0.5rem; */
-}
-
-#customSearchContainer .custom-add-button {
-  /* margin-left: 0.5rem; /* Spacing from search button */
-}
 </style>

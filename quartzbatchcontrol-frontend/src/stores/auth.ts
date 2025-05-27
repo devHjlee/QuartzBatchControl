@@ -42,6 +42,15 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       // localStorage에서 토큰 제거
       localStorage.removeItem('token')
+    },
+    initializeAuth() {
+      const token = localStorage.getItem('token');
+      if (token) {
+        this.token = token;
+        this.isLoggedIn = true;
+      } else {
+        this.logout(); // 토큰이 없으면 로그아웃 상태로 확실히 처리
+      }
     }
   }
 })

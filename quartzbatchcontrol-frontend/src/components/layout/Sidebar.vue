@@ -35,7 +35,7 @@
         <div class="bg-white py-2 collapse-inner rounded">
           <h6 class="collapse-header">Custom Components:</h6>
           <router-link class="collapse-item" to="/batch">Batch 관리</router-link>
-          <router-link class="collapse-item" to="/cards">Batch Log</router-link>
+          <router-link class="collapse-item" to="/batch-log">Batch Log</router-link>
         </div>
       </div>
     </li>
@@ -49,7 +49,7 @@
         <div class="bg-white py-2 collapse-inner rounded">
           <h6 class="collapse-header">Custom Components:</h6>
           <router-link class="collapse-item" to="/job">Quartz 관리</router-link>
-          <router-link class="collapse-item" to="/cards">Quartz Log</router-link>
+          <router-link class="collapse-item" to="/job-log">Quartz Log</router-link>
         </div>
       </div>
     </li>

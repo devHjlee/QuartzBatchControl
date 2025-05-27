@@ -8,7 +8,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.quartz.JobDataMap;
 
 @Getter
 @NoArgsConstructor
@@ -16,7 +15,7 @@ import org.quartz.JobDataMap;
 public class QuartzJobRequest {
 
     private Long id;
-    private Long metaId;
+    private Long batchMetaId;
 
     @NotBlank(message = "잡 이름은 필수입니다.")
     private String jobName;
@@ -32,8 +31,6 @@ public class QuartzJobRequest {
 
     @NotNull(message = "Misfire 정책은 필수입니다.")
     private MisfirePolicy misfirePolicy;
-
-    private JobDataMap parameters;
 
     private QuartzJobEventType eventType;
 }

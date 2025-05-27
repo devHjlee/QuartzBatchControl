@@ -3,6 +3,7 @@ package com.quartzbatchcontrol.batch.application;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quartzbatchcontrol.batch.api.request.BatchJobMetaRequest;
+import com.quartzbatchcontrol.batch.api.response.BatchJobMetaResponse;
 import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
 import com.quartzbatchcontrol.batch.infrastructure.BatchJobMetaRepository;
 
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.quartzbatchcontrol.batch.api.response.BatchJobDetailResponse;
 import com.quartzbatchcontrol.batch.api.response.BatchJobMetaSummaryResponse;
@@ -39,8 +41,8 @@ public class BatchJobService {
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
-    public Page<BatchJobMetaSummaryResponse> getAllBatchJobMetas(String jobName, String metaName, Pageable pageable) {
-        Page<BatchJobMetaSummaryResponse> rawPage = batchJobMetaRepository.findBySearchCondition(jobName, metaName, pageable);
+    public Page<BatchJobMetaSummaryResponse> getAllBatchJobMetas(String keyword, Pageable pageable) {
+        Page<BatchJobMetaSummaryResponse> rawPage = batchJobMetaRepository.findBySearchCondition(keyword, pageable);
 
         ObjectMapper mapper = new ObjectMapper();
 
@@ -85,6 +87,14 @@ public class BatchJobService {
         return jobRegistry.getJobNames().stream()
                 .sorted()
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BatchJobMetaResponse> getAllBatchJobMetas() {
+        return batchJobMetaRepository.findAll()
+                .stream()
+                .map(BatchJobMetaResponse::from)
+                .collect(Collectors.toList());
     }
 
     @Transactional
