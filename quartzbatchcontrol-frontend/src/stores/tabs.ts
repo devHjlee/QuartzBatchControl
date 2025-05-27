@@ -21,27 +21,18 @@ export const useTabsStore = defineStore('tabs', {
   actions: {
     // 탭 추가 또는 활성화
     addTab(route: any) { // route 타입은 Vue Router의 RouteLocationNormalizedLoaded
-      if (!route.meta || !route.meta.title || !route.name) { // 탭으로 관리하지 않을 라우트 (예: 로그인, 이름 없는 라우트)
-        // console.log('Skipping tab for route without meta.title or name:', route);
+      if (!route.meta || !route.meta.title) { // 탭으로 관리하지 않을 라우트 (예: 로그인 페이지)
+        // console.log('Skipping tab for route without meta.title:', route.name);
         return;
       }
 
-      const tabIdentifier = route.name as string; // 탭의 고유 ID를 라우트 이름으로 사용
-      const existingTab = this.openedTabs.find(tab => tab.id === tabIdentifier);
-
+      const existingTab = this.openedTabs.find(tab => tab.path === route.fullPath);
       if (existingTab) {
-        // 이미 해당 이름의 탭이 존재하면, 해당 탭을 활성화하고 fullPath (쿼리 포함)만 업데이트
-        existingTab.path = route.fullPath; // 최신 fullPath (쿼리 포함)로 업데이트
-        existingTab.name = route.meta.title || route.name; // 최신 title로 업데이트 (라우트 meta의 title이 우선)
         this.setActiveTab(existingTab.id);
-        // TabBar.vue에서 탭 클릭 시 router.push(existingTab.path)가 호출되므로, 여기서 별도 push는 불필요.
-        // JobTable.vue는 route.query.searchFromBatchTable 변경을 watch하고 있으므로,
-        // router.afterEach에서 addTab이 호출되고, activeTabId가 변경되면
-        // TabBar.vue에서 해당 탭으로 UI가 변경되고, JobTable.vue의 watch가 동작할 것으로 예상.
       } else {
         const newTab: Tab = {
-          id: tabIdentifier, // 탭 ID를 라우트 이름으로 설정
-          name: route.meta.title || route.name, // 라우트 meta의 title 우선
+          id: route.fullPath,
+          name: route.name || route.meta.title || 'New Tab',
           path: route.fullPath,
           closable: route.meta.closable !== undefined ? route.meta.closable : true,
         };
