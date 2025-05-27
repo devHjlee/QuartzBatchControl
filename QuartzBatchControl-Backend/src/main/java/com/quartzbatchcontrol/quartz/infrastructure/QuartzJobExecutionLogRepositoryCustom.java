@@ -5,6 +5,6 @@ import com.quartzbatchcontrol.quartz.api.response.QuartzLogResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-public interface QuartzLogExecutionRepositoryCustom {
+public interface QuartzJobExecutionLogRepositoryCustom {
     Page<QuartzLogResponse> findBySearchLog(QuartzLogSearchRequest searchRequest, Pageable pageable);
 }

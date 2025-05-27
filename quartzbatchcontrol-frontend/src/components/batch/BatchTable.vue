@@ -386,11 +386,21 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
     // Quartz 연동 상세 보기 버튼 이벤트 바인딩
     $(document).off('click', '#batchMetaTable a.action-view-job').on('click', '#batchMetaTable a.action-view-job', function (e) {
       e.preventDefault();
+      e.stopPropagation(); // 이벤트 버블링을 막습니다.
       const metaName = $(this).data('meta-name');
+      console.log('[DEBUG] action-view-job clicked. metaName:', metaName); // 핸들러 호출 및 metaName 값 확인용 로그
+
       if (metaName) {
-        // JobView.vue로 이동하면서 metaName을 쿼리 파라미터로 전달
-        // JobView.vue에서는 이 쿼리 파라미터를 읽어 검색을 수행해야 함
-        router.push({ name: 'Quartz 관리', query: { searchFromBatchTable: metaName } }); // 'JobView' -> 'Quartz 관리'로 수정
+        console.log('[DEBUG] Navigating to Quartz 관리 with metaName:', metaName); // 라우팅 시도 로그
+        router.push({ name: 'Quartz 관리', query: { searchFromBatchTable: metaName } })
+          .catch(err => {
+            // 일반적으로 NavigationDuplicated 에러는 무시해도 괜찮지만, 확인을 위해 로그를 남깁니다.
+            if (err.name !== 'NavigationDuplicated') {
+              console.error('Vue Router push error:', err);
+            } else {
+              console.log('Vue Router: NavigationDuplicated - This is often fine.');
+            }
+          });
       }
     });
 

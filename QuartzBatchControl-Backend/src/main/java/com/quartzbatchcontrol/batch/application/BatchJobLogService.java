@@ -1,6 +1,8 @@
 package com.quartzbatchcontrol.batch.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.quartzbatchcontrol.batch.api.request.BatchLogSearchRequest;
+import com.quartzbatchcontrol.batch.api.response.BatchLogResponse;
 import com.quartzbatchcontrol.batch.domain.BatchJobLog;
 import com.quartzbatchcontrol.batch.infrastructure.BatchJobLogRepository;
 import com.quartzbatchcontrol.global.exception.BusinessException;
@@ -8,6 +10,8 @@ import com.quartzbatchcontrol.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +24,10 @@ public class BatchJobLogService {
     private final BatchJobLogRepository batchJobLogRepository;
     private final ObjectMapper objectMapper;
 
+    @Transactional(readOnly = true)
+    public Page<BatchLogResponse> getAllBatchLogs(BatchLogSearchRequest request, Pageable pageable) {
+        return batchJobLogRepository.findBySearchLog(request, pageable);
+    }
     @Transactional
     public void startLog(JobExecution jobExecution) {
         try {

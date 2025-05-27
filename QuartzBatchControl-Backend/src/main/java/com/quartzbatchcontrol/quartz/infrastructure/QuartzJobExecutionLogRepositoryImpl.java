@@ -10,12 +10,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
 
-@RequiredArgsConstructor // JPAQueryFactory 주입을 위해
-public class QuartzJobExecutionLogRepositoryImpl implements QuartzLogExecutionRepositoryCustom {
+@Repository
+@RequiredArgsConstructor
+public class QuartzJobExecutionLogRepositoryImpl implements QuartzJobExecutionLogRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
     private final QQuartzJobExecutionLog quartzLog = QQuartzJobExecutionLog.quartzJobExecutionLog;

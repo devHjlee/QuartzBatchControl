@@ -45,7 +45,7 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
                         batchJobMeta.id.eq(quartzJobMeta.batchMetaId)
                 )
                 .where(
-                        containsKeyword(keyword)
+                        keywordContains(keyword)
                 )
                 .orderBy(batchJobMeta.createdAt.desc())
                 .offset(pageable.getOffset())
@@ -56,14 +56,14 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
                 .select(batchJobMeta.count())
                 .from(batchJobMeta)
                 .where(
-                        containsKeyword(keyword)
+                        keywordContains(keyword)
                 )
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }
 
-    private BooleanExpression containsKeyword(String keyword) {
+    private BooleanExpression keywordContains(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             return null;
         }
