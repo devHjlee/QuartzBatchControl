@@ -21,18 +21,36 @@ export const useTabsStore = defineStore('tabs', {
   actions: {
     // 탭 추가 또는 활성화
     addTab(route: any) { // route 타입은 Vue Router의 RouteLocationNormalizedLoaded
+      console.log('[DEBUG tabs.ts] addTab called with route:', JSON.parse(JSON.stringify(route)), 'Time:', new Date().toISOString()); // addTab 호출 로그 추가
       if (!route.meta || !route.meta.title) { // 탭으로 관리하지 않을 라우트 (예: 로그인 페이지)
         // console.log('Skipping tab for route without meta.title:', route.name);
         return;
       }
 
-      const existingTab = this.openedTabs.find(tab => tab.path === route.fullPath);
-      if (existingTab) {
-        this.setActiveTab(existingTab.id);
+      const routeName = route.name || route.meta.title;
+      const existingTabByNameAndPath = this.openedTabs.find(tab =>
+        tab.name === routeName && tab.path.split('?')[0] === route.path.split('?')[0]
+      );
+
+      if (existingTabByNameAndPath) {
+        // 이름과 기본 경로가 같은 탭이 이미 존재
+        if (existingTabByNameAndPath.path === route.fullPath) {
+          // fullPath까지 완전히 동일하면 그냥 활성화
+          this.setActiveTab(existingTabByNameAndPath.id);
+        } else {
+          // fullPath가 다르면 (예: 쿼리 변경), 기존 탭의 경로와 ID를 업데이트하고 활성화
+          existingTabByNameAndPath.path = route.fullPath;
+          existingTabByNameAndPath.id = route.fullPath; // ID도 fullPath 기준으로 업데이트
+          this.setActiveTab(existingTabByNameAndPath.id);
+          // 만약 라우터 자체의 경로도 업데이트해야 한다면,
+          // 하지만 addTab은 이미 라우팅이 변경된 후에 호출되므로, router.push는 필요 없을 수 있음.
+          // 필요시 router.replace(route.fullPath) 등을 고려. 여기서는 상태만 업데이트.
+        }
       } else {
+        // 새로운 탭 추가
         const newTab: Tab = {
-          id: route.fullPath,
-          name: route.name || route.meta.title || 'New Tab',
+          id: route.fullPath, // ID로 fullPath 사용
+          name: routeName || 'New Tab',
           path: route.fullPath,
           closable: route.meta.closable !== undefined ? route.meta.closable : true,
         };

@@ -362,48 +362,6 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
       }
     });
 
-    // 수정 버튼 이벤트 바인딩 (중복 방지)
-    $(document).off('click', '#batchMetaTable button.action-edit').on('click', '#batchMetaTable button.action-edit', function (e) {
-      e.preventDefault();
-      const jobId = $(this).data('job-id');
-      const job = batchJobs.value.find(j => j.id === jobId);
-      if (job) {
-        handleEdit(job);
-      }
-    });
-
-    // 실행 버튼 이벤트 바인딩
-    $(document).off('click', '#batchMetaTable button.action-execute').on('click', '#batchMetaTable button.action-execute', function (e) {
-      e.preventDefault();
-      const jobId = $(this).data('job-id');
-      if (jobId) {
-        if (confirm('정말로 이 작업을 실행하시겠습니까?')) {
-          handleExecuteJob(jobId);
-        }
-      }
-    });
-
-    // Quartz 연동 상세 보기 버튼 이벤트 바인딩
-    $(document).off('click', '#batchMetaTable a.action-view-job').on('click', '#batchMetaTable a.action-view-job', function (e) {
-      e.preventDefault();
-      e.stopPropagation(); // 이벤트 버블링을 막습니다.
-      const metaName = $(this).data('meta-name');
-      console.log('[DEBUG] action-view-job clicked. metaName:', metaName); // 핸들러 호출 및 metaName 값 확인용 로그
-
-      if (metaName) {
-        console.log('[DEBUG] Navigating to Quartz 관리 with metaName:', metaName); // 라우팅 시도 로그
-        router.push({ name: 'Quartz 관리', query: { searchFromBatchTable: metaName } })
-          .catch(err => {
-            // 일반적으로 NavigationDuplicated 에러는 무시해도 괜찮지만, 확인을 위해 로그를 남깁니다.
-            if (err.name !== 'NavigationDuplicated') {
-              console.error('Vue Router push error:', err);
-            } else {
-              console.log('Vue Router: NavigationDuplicated - This is often fine.');
-            }
-          });
-      }
-    });
-
   } catch (err) {
     console.error('배치 작업 메타 조회 또는 DataTable 초기화 실패', err)
   }
@@ -637,15 +595,16 @@ const router = useRouter()
 
 onMounted(() => {
   fetchBatchJobs(currentPage.value, pageSize.value);
-  // 이벤트 위임 추가 (동적으로 생성된 버튼 대응)
-  $(document).on('click', 'a.action-view-parameters', function (e) {
+  // Quartz 연동 상세 보기 버튼 이벤트 바인딩
+  $(document).on('click', '#batchMetaTable a.action-view-job', function (e) {
     e.preventDefault();
-    const jobId = $(this).data('job-id');
-    if (jobId) {
-      const job = batchJobs.value.find(j => j.id === jobId);
-      if (job) {
-        handleEdit(job);
-      }
+    e.stopPropagation(); // 이벤트 버블링을 막습니다.
+    const metaName = $(this).data('meta-name');
+    console.log('[DEBUG BatchTable] action-view-job click. metaName:', metaName, 'Time:', new Date().toISOString()); // 라우터 푸시 직전 로그 추가
+
+    if (metaName) {
+      // console.log('[DEBUG] Navigating to Quartz 관리 with metaName:', metaName);
+      router.push({ name: 'Quartz 관리', query: { searchFromBatchTable: metaName } })
     }
   });
 });
