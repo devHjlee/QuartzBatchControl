@@ -158,6 +158,7 @@
 import { onMounted, ref, nextTick, computed } from 'vue'
 import axios from '@/api/axios'
 import $ from 'jquery'
+import { useRouter } from 'vue-router'
 
 interface BatchJobMeta {
   id: number
@@ -252,6 +253,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
       pageLength: size,
       lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "전체"]],
       dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"<"#customSearchContainer">>><"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+      ordering: false, // 테이블 정렬 기능 비활성화
       language: {
         emptyTable: '조회된 데이터가 없습니다.',
         lengthMenu: '_MENU_개씩 보기',
@@ -305,7 +307,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
           className: 'text-center',
           render: function(data, type, row) {
             if (data === true) {
-              return `<a href="#" class="btn btn-success btn-circle btn-sm action-view-job" data-job-id="${row.id}" title="Job 상세 보기"><i class="fas fa-check"></i></a>`;
+              return `<a href="#" class="btn btn-success btn-circle btn-sm action-view-job" data-meta-name="${row.metaName}" title="Job 상세 보기"><i class="fas fa-check"></i></a>`;
             }
             return '';
           }
@@ -321,9 +323,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
             // 수정 버튼 (Font Awesome 아이콘 및 btn-circle 적용)
             buttons += `<button class="btn btn-sm btn-primary btn-circle action-edit me-1" data-job-id="${row.id}" title="수정"><i class="fas fa-edit"></i></button>`;
             // 실행 버튼 (Font Awesome 아이콘 및 btn-circle 적용)
-            // BatchTable의 '실행'이 Quartz의 '즉시실행'과 동일한 의미인지, 아니면 다른 의미인지 명확하지 않아 일단 play 아이콘 사용
-            // 필요시 아이콘 및 title, API 연동 수정 필요
-            buttons += `<button class="btn btn-sm btn-info btn-circle action-execute" data-job-id="${row.id}" title="실행"><i class="fas fa-play"></i></button>`;
+            buttons += `<button class="btn btn-sm btn-info btn-circle action-execute me-1" data-job-id="${row.id}" title="실행"><i class="fas fa-play"></i></button>`; // 모든 버튼에 me-1 적용
             return buttons;
           }
         }
@@ -380,6 +380,17 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
         if (confirm('정말로 이 작업을 실행하시겠습니까?')) {
           handleExecuteJob(jobId);
         }
+      }
+    });
+
+    // Quartz 연동 상세 보기 버튼 이벤트 바인딩
+    $(document).off('click', '#batchMetaTable a.action-view-job').on('click', '#batchMetaTable a.action-view-job', function (e) {
+      e.preventDefault();
+      const metaName = $(this).data('meta-name');
+      if (metaName) {
+        // JobView.vue로 이동하면서 metaName을 쿼리 파라미터로 전달
+        // JobView.vue에서는 이 쿼리 파라미터를 읽어 검색을 수행해야 함
+        router.push({ name: 'Quartz 관리', query: { searchFromBatchTable: metaName } }); // 'JobView' -> 'Quartz 관리'로 수정
       }
     });
 
@@ -611,6 +622,8 @@ const handleExecuteJob = async (jobId: number) => {
     alert(error.response?.data?.message || '작업 실행 중 오류가 발생했습니다.');
   }
 };
+
+const router = useRouter()
 
 onMounted(() => {
   fetchBatchJobs(currentPage.value, pageSize.value);

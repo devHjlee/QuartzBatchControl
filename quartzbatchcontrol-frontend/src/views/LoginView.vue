@@ -74,7 +74,12 @@ const handleLogin = async () => {
     console.log(response);
     if (response.data && response.data.data.accessToken) {
       authStore.login(response.data.data.accessToken)
-      router.push('/dashboard')
+      const redirectPath = router.currentRoute.value.query.redirect;
+      if (typeof redirectPath === 'string' && redirectPath) {
+        router.replace(redirectPath);
+      } else {
+        router.replace('/dashboard');
+      }
     } else {
       alert('로그인 응답에 토큰이 없습니다. 백엔드 응답 구조를 확인하세요.')
       console.error('로그인 응답:', response.data)

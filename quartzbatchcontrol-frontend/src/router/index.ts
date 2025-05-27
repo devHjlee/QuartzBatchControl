@@ -25,8 +25,15 @@ const router = createRouter({
 // ✅ 라우터 가드 (보호된 페이지는 로그인 필요)
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    next('/login')
+  const isAuthenticated = !!authStore.token; // 스토어의 token 상태를 직접 사용
+
+  if (to.name === 'Login' && isAuthenticated) {
+    // 이미 로그인된 사용자가 로그인 페이지로 접근 시 대시보드로 리다이렉트
+    next({ name: 'Dashboard' })
+  } else if (to.meta.requiresAuth && !isAuthenticated) {
+    // 인증이 필요한 페이지에 접근하려는데, 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+    // 사용자가 의도했던 경로를 저장하여 로그인 후 해당 경로로 리다이렉트할 수 있도록 함
+    next({ name: 'Login', query: { redirect: to.fullPath } })
   } else {
     next()
   }

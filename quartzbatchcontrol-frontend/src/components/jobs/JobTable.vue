@@ -102,6 +102,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import axios from '@/api/axios'
 import $ from 'jquery'
 
@@ -156,6 +157,9 @@ const nextFireTimes = ref<number[]>([]);
 const isLoadingNextFireTimes = ref(false);
 const cronError = ref('');
 
+const route = useRoute(); // 현재 라우트 정보
+const router = useRouter(); // 라우터 인스턴스
+
 watch(() => newQuartzJobForm.value.jobType, (newType) => {
   if (newType === 'SIMPLE') {
     newQuartzJobForm.value.selectedBatchMetaId = ''; // SIMPLE 타입으로 변경 시, 선택된 배치 메타 ID 초기화
@@ -174,8 +178,23 @@ const formatTime = (timestamp: number): string => {
 
 const fetchQuartzJobs = async () => {
   try {
+    // 라우트 쿼리가 있다면 (Batch 관리에서 넘어온 경우), searchInputValue를 먼저 설정
+    if (route.query.searchFromBatchTable && typeof route.query.searchFromBatchTable === 'string') {
+      searchInputValue.value = route.query.searchFromBatchTable;
+      // URL에서 쿼리 파라미터 제거 (새로고침 시 유지되지 않도록)
+      const currentPath = route.path;
+      const currentQuery = { ...route.query };
+      delete currentQuery.searchFromBatchTable;
+      // router.replace를 사용하여 히스토리 스택에 추가하지 않고 URL 변경
+      // 이 시점에서 router.replace는 watch를 다시 트리거하지 않도록 주의해야 함.
+      // watch의 조건이나, watch 내부에서 router.replace 후 즉시 return 하는 등의 처리 필요 가능성.
+      // 하지만 watch는 route.query.searchFromBatchTable을 감지하므로, 이 값 자체가 없어지면 watch 콜백은 더 이상 실행되지 않음.
+      router.replace({ path: currentPath, query: currentQuery }); 
+    }
+
     if (dataTable.value) {
-      dataTable.value.destroy()
+      dataTable.value.destroy();
+      dataTable.value = null; // 확실한 초기화를 위해 null 할당
     }
 
     dataTable.value = window.jQuery('#quartzMetaTable').DataTable({
@@ -209,7 +228,7 @@ const fetchQuartzJobs = async () => {
           params: {
             page: dtParams.start / dtParams.length,
             size: dtParams.length,
-            keyword: searchInputValue.value,
+            keyword: searchInputValue.value, // 여기에서 searchInputValue 사용
           }
         })
         .then(function (response) {
@@ -274,9 +293,9 @@ const fetchQuartzJobs = async () => {
         if (customSearchContainer) {
           customSearchContainer.innerHTML = `
             <div class="input-group">
-              <input type="text" class="form-control custom-search-input" placeholder="Job Name 검색">
-              <button class="btn btn-outline-secondary custom-search-button me-2" type="button">검색</button>
-              <button class="btn btn-primary custom-add-button" type="button">추가</button>
+              <input type="text" class="form-control custom-search-input" placeholder="Job Name, Batch Name 검색">
+              <button class="btn btn-outline-secondary custom-search-button ms-1" type="button">검색</button>
+              <button class="btn btn-primary ms-2 custom-add-button" type="button">추가</button>
             </div>
           `;
 
@@ -285,14 +304,17 @@ const fetchQuartzJobs = async () => {
           const addButton = customSearchContainer.querySelector('.custom-add-button');
 
           if (searchInput instanceof HTMLInputElement && searchButton && addButton) {
+            // DataTable 초기화 시, searchInputValue 값을 검색창에 반영
+            searchInput.value = searchInputValue.value;
+
             searchInput.addEventListener('keyup', (event) => {
-              searchInputValue.value = searchInput.value;
+              searchInputValue.value = searchInput.value; // UI 변경 시 searchInputValue 업데이트
               if (event.key === 'Enter') {
                 dataTable.value.ajax.reload();
               }
             });
             searchButton.addEventListener('click', () => {
-              searchInputValue.value = searchInput.value;
+              searchInputValue.value = searchInput.value; // UI 변경 시 searchInputValue 업데이트
               dataTable.value.ajax.reload();
             });
             addButton.addEventListener('click', () => {
@@ -559,7 +581,40 @@ const fetchNextFireTimes = async () => {
 };
 
 onMounted(() => {
+  // 컴포넌트 마운트 시 fetchQuartzJobs를 호출하여 테이블을 초기화.
+  // fetchQuartzJobs 내부에서 라우트 쿼리를 확인하여 searchInputValue를 설정함.
   fetchQuartzJobs();
+
+  // 라우트 쿼리 `searchFromBatchTable`이 변경되는 것을 감지 (탭 이동 등으로 인해)
+  watch(() => route.query.searchFromBatchTable, (newSearchTerm, oldSearchTerm) => {
+    // newSearchTerm이 있고, 이전 값과 다를 때만 처리 (무한루프 방지 목적도 있음)
+    if (newSearchTerm && typeof newSearchTerm === 'string' && newSearchTerm !== oldSearchTerm) {
+      searchInputValue.value = newSearchTerm;
+      
+      // 검색창 UI에도 반영 (initComplete는 테이블 전체 재생성 시에만 호출되므로, 직접 업데이트)
+      const searchInput = document.querySelector('#customSearchContainer .custom-search-input') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.value = newSearchTerm;
+      }
+
+      if (dataTable.value) {
+        dataTable.value.ajax.reload();
+      }
+      
+      // URL에서 쿼리 파라미터 제거
+      const currentPath = route.path;
+      const currentQuery = { ...route.query };
+      delete currentQuery.searchFromBatchTable;
+      router.replace({ path: currentPath, query: currentQuery });
+
+    } else if (!newSearchTerm && searchInputValue.value !== '' && oldSearchTerm) {
+        // searchFromBatchTable 쿼리가 URL에서 사라졌고 (예: 위에서 router.replace로 삭제 후),
+        // 이전에 검색어가 있었다면 (oldSearchTerm), 테이블을 초기 상태로 만들거나 현재 검색어를 유지할지 결정.
+        // 현재는 위에서 newSearchTerm이 있을 때만 reload하므로, 이 조건은 특별한 동작을 하지 않음.
+        // 만약 URL에서 쿼리가 제거된 후 테이블을 "" 검색어로 리프레시하고 싶다면 여기서 처리.
+        // 예: searchInputValue.value = ''; dataTable.value.ajax.reload();
+    }
+  }, { immediate: false }); // immediate: false로 변경하여 마운트 시 중복 실행 방지 (fetchQuartzJobs가 이미 처리)
 });
 </script>
 
