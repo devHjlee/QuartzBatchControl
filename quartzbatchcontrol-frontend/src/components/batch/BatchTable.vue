@@ -367,8 +367,9 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
   }
 }
 
-const handleEdit = async (job: BatchJobMeta) => {
-  currentJobIdForModal.value = job.id;
+const handleEdit = async (jobId: number) => {
+  console.log('[DEBUG] handleEdit 함수 시작, jobId:', jobId);
+  currentJobIdForModal.value = jobId;
   showParametersModal.value = true;
   isLoadingParameters.value = true;
 
@@ -379,7 +380,7 @@ const handleEdit = async (job: BatchJobMeta) => {
   availableBatchJobs.value = [];
 
   try {
-    const response = await axios.get(`/batch/${job.id}`);
+    const response = await axios.get(`/batch/${jobId}`);
     if (response.data && response.data.success) {
       const jobDetails = response.data.data;
       batchJobForm.value = {
@@ -412,6 +413,7 @@ const handleEdit = async (job: BatchJobMeta) => {
   } finally {
     isLoadingParameters.value = false;
   }
+  console.log('[DEBUG] handleEdit 함수 끝, showParametersModal:', showParametersModal.value);
 }
 
 const handleAddNew = async () => {
@@ -605,6 +607,38 @@ onMounted(() => {
     if (metaName) {
       // console.log('[DEBUG] Navigating to Quartz 관리 with metaName:', metaName);
       router.push({ name: 'Quartz 관리', query: { searchFromBatchTable: metaName } })
+    }
+  });
+
+  // 수정 버튼 이벤트 바인딩 추가
+  $(document).on('click', '#batchMetaTable .action-edit', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const jobId = $(this).data('job-id');
+    console.log('[DEBUG BatchTable] action-edit click. jobId:', jobId, 'Time:', new Date().toISOString());
+    if (jobId) {
+      // const jobData = batchJobs.value.find(job => job.id === jobId); // batchJobs.value에서 찾거나,
+      // if (jobData) {
+      //   handleEdit(jobData);
+      // } else {
+      //   console.error('Job data not found for ID:', jobId);
+      //   alert('해당 작업 정보를 찾을 수 없습니다.');
+      // }
+      // 현재 handleEdit는 jobId를 인자로 받아 API 호출을 하므로, jobId만 넘겨줍니다.
+      handleEdit(jobId);
+    }
+  });
+
+  // 실행 버튼 이벤트 바인딩 추가
+  $(document).on('click', '#batchMetaTable .action-execute', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const jobId = $(this).data('job-id');
+    console.log('[DEBUG BatchTable] action-execute click. jobId:', jobId, 'Time:', new Date().toISOString());
+    if (jobId) {
+      if (confirm('해당 작업을 실행하시겠습니까?')) {
+        handleExecuteJob(jobId);
+      }
     }
   });
 });

@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useTabsStore } from './tabs'
 
 interface AuthState {
   isLoggedIn: boolean
@@ -42,6 +43,11 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       // localStorage에서 토큰 제거
       localStorage.removeItem('token')
+
+      // Tabs 스토어 상태 초기화 추가
+      const tabsStore = useTabsStore()
+      tabsStore.openedTabs = []
+      tabsStore.activeTabId = null
     },
     initializeAuth() {
       const token = localStorage.getItem('token');
