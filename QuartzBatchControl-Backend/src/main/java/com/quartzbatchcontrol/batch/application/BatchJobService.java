@@ -11,9 +11,7 @@ import com.quartzbatchcontrol.global.exception.BusinessException;
 import com.quartzbatchcontrol.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.*;
 import org.springframework.batch.core.configuration.JobRegistry;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.NoSuchJobException;
@@ -156,11 +154,15 @@ public class BatchJobService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
         try {
             Job job = jobRegistry.getJob(batchJobMeta.getJobName());
-            JobParameters jobParameters = createJobParameters(batchJobMeta);
-            jobLauncher.run(job, jobParameters);
+            JobParameters jobParameters = createJobParameters(batchJobMeta, userName);
+            JobExecution jobExecution = jobLauncher.run(job, jobParameters);
+
+            if (jobExecution.getStatus() == BatchStatus.FAILED) {
+                throw new BusinessException(ErrorCode.BATCH_JOB_FAILED);
+            }
         } catch (Exception e) {
             log.error("배치 작업 실행 중 오류 발생: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+            throw new BusinessException(ErrorCode.BATCH_JOB_FAILED);
         }
     }
 
@@ -191,11 +193,12 @@ public class BatchJobService {
         }
     }
 
-    private JobParameters createJobParameters(BatchJobMeta batchJobMeta) {
+    private JobParameters createJobParameters(BatchJobMeta batchJobMeta, String userName) {
         JobParametersBuilder builder = new JobParametersBuilder()
                 .addLong("timestamp", System.currentTimeMillis());
 
         builder.addLong("metaId", batchJobMeta.getId());
+        builder.addString("executedBy", userName);
 
         Map<String, Object> params = deserializeParams(batchJobMeta.getJobParameters());
         if (params != null) {

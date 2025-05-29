@@ -630,7 +630,7 @@ onMounted(() => {
   });
 
   // 실행 버튼 이벤트 바인딩 추가
-  $(document).on('click', '#batchMetaTable .action-execute', function (e) {
+  $(document).off('click', '#batchMetaTable .action-execute').on('click', '#batchMetaTable .action-execute', function (e) {
     e.preventDefault();
     e.stopPropagation();
     const jobId = $(this).data('job-id');
