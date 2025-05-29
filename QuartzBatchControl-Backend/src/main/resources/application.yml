@@ -39,4 +39,4 @@ spring:
 
 jwt:
   secret: batch-control-jwt-secret-key-256-bits-long-1234567890abcdefghijklmnopqrstuvwxyz
-  token-validity-in-seconds: 60
+  token-validity-in-seconds: 12000
