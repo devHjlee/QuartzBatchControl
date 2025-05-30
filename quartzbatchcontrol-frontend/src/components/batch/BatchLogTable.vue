@@ -4,20 +4,24 @@
     <!-- DataTales Example -->
     <div class="card shadow mb-4">
       <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Batch Log 관리</h6>
+        <h6 class="m-0 font-weight-bold text-primary">배치 실행 로그</h6>
       </div>
       <div class="card-body">
         <div class="table-responsive">
           <table id="batchLogTable" class="table table-bordered" width="100%" cellspacing="0">
             <thead>
               <tr>
+                <th class="center-text">ID</th>
                 <th class="center-text">Job Name</th>
-                <th class="center-text">Instance ID</th>
+                <th class="center-text">Batch Name</th>
                 <th class="center-text">Status</th>
                 <th class="center-text">Start Time</th>
                 <th class="center-text">End Time</th>
-                <th class="center-text">Message</th>
-                <!-- <th class="center-text">Action</th> -->
+                <th class="center-text">Exit Code</th>
+                <th class="center-text">Exit Message</th>
+                <!-- <th class="center-text">Parameters</th> -->
+                <!-- <th class="center-text">Job Execution ID</th> -->
+                <!-- <th class="center-text">Meta ID</th> -->
               </tr>
             </thead>
             <tbody>
@@ -40,23 +44,29 @@ import axios from '@/api/axios'
 import $ from 'jquery'
 // import { useRouter } from 'vue-router' // No longer needed for navigation from this table
 
+// BatchLogResponse.java 에 맞춘 인터페이스
 interface BatchLogItem {
-  id: number // Assuming there's an ID for each log entry
-  jobName: string
-  jobInstanceId: string // Or number, depending on backend
-  status: string
-  startTime: string // ISO string or similar, will be formatted
-  endTime: string   // ISO string or similar, will be formatted
-  exitMessage: string
-  // Add other relevant log fields based on BatchLogResponse
+  id: number;
+  jobExecutionId: number | null;
+  jobName: string;
+  metaId: number | null;
+  batchName: string | null;
+  startTime: string;
+  endTime: string | null;
+  status: string;
+  exitCode: string | null;
+  exitMessage: string | null;
+  jobParameters: string | null;
 }
 
-interface PageResponse {
-  content: BatchLogItem[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
+// Spring의 Page 응답 또는 PagedModel을 위한 인터페이스
+interface SpringPage {
+  content: BatchLogItem[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number; // 현재 페이지 (0-indexed)
+  // PagedModel의 경우 metadata.number, metadata.size 등으로 접근할 수 있음
 }
 
 const batchLogs = ref<BatchLogItem[]>([])
@@ -64,11 +74,27 @@ const dataTable = ref<any>(null)
 // const currentPage = ref(0) // Not directly used with server-side DataTable's own paging
 // const pageSize = ref(10) // DataTable's pageLength handles this
 
-const searchInputValue = ref(''); // To store search input
+const searchKeyword = ref('')
+const searchStatus = ref('') // Status 검색을 위한 ref
 
-const formatTime = (time: string): string => {
+const formatTime = (time: string | null): string => {
   if (!time) return '-'
-  return new Date(time).toLocaleString()
+  try {
+    return new Date(time).toLocaleString()
+  } catch (e) {
+    console.error('Invalid time format:', time, e)
+    return 'Invalid Date'
+  }
+}
+
+const escapeHtml = (unsafe: string | null): string => {
+  if (unsafe === null || typeof unsafe === 'undefined') return '';
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 const fetchBatchLogs = async () => {
@@ -81,7 +107,7 @@ const fetchBatchLogs = async () => {
 
     dataTable.value = window.jQuery('#batchLogTable').DataTable({
       paging: true,
-      searching: false, // Disable DataTables default search, custom one is used
+      searching: false, // DataTables 자체 검색 비활성화
       info: true,
       responsive: true,
       serverSide: true,
@@ -89,14 +115,14 @@ const fetchBatchLogs = async () => {
       // pageLength: pageSize.value, // Uses DataTable's default or what's selected in lengthMenu
       lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "전체"]],
       dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"<"#customSearchContainer">>><"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-      ordering: false,
+      ordering: false, // 정렬 기능 비활성화
       language: {
         emptyTable: '조회된 로그가 없습니다.',
         lengthMenu: '_MENU_개씩 보기',
         zeroRecords: '검색 결과가 없습니다.',
-        info: '총 _TOTAL_건 중 _START_~_END_',
-        infoEmpty: '데이터가 없습니다.',
-        infoFiltered: '(전체 _MAX_건 중 검색결과)',
+        info: '총 _TOTAL_건 중 _START_~_END_ 표시',
+        infoEmpty: '표시할 데이터가 없습니다.',
+        infoFiltered: '(전체 _MAX_건에서 검색됨)',
         paginate: {
           first: '처음',
           last: '마지막',
@@ -105,49 +131,29 @@ const fetchBatchLogs = async () => {
         },
         processing: '데이터를 불러오는 중...',
       },
-      ajax: function (dtParams, callback, settings) {
-        axios.get('/batch-log', { // Updated API endpoint
+      ajax: function (dtParams: any, callback: Function, settings: any) {
+        axios.get('/batch-log', {
           params: {
-            page: dtParams.start / dtParams.length,
+            page: dtParams.start / dtParams.length, // 0-indexed page
             size: dtParams.length,
-            keyword: searchInputValue.value, // Assuming backend supports 'keyword' for search
-            // Add other BatchLogSearchRequest params if needed
+            keyword: searchKeyword.value,
+            status: searchStatus.value,
           }
         })
         .then(function (response) {
-          const backendPayload = response.data.data;
-          // Assuming backend response structure is { data: { content: [], page: { totalElements: ... } } }
-          // or { data: { content: [], totalElements: ... } } if PagedModel is flattened
-          let content = [];
-          let recordsTotal = 0;
+          // JobLogTable.vue의 응답 처리 방식과 유사하게 수정
+          const backendResponse = response.data;
 
-          if (backendPayload && Array.isArray(backendPayload.content)) { // Standard Spring Page
-            content = backendPayload.content;
-            recordsTotal = backendPayload.totalElements; // If page object is not nested
-             if (backendPayload.page && typeof backendPayload.page.totalElements !== 'undefined') { // If PagedModel structure
-                recordsTotal = backendPayload.page.totalElements;
-             } else if (typeof backendPayload.totalElements !== 'undefined') { // If page object is flat
-                recordsTotal = backendPayload.totalElements;
-             }
-
-            batchLogs.value = content;
+          if (backendResponse.success && backendResponse.data && backendResponse.data.content && backendResponse.data.page) {
+            batchLogs.value = backendResponse.data.content;
             callback({
               draw: dtParams.draw,
-              recordsTotal: recordsTotal,
-              recordsFiltered: recordsTotal, // Assuming no separate filtering count from backend for now
-              data: content
+              recordsTotal: backendResponse.data.page.totalElements,
+              recordsFiltered: backendResponse.data.page.totalElements,
+              data: backendResponse.data.content
             });
-          } else if (backendPayload && Array.isArray(backendPayload.content) && backendPayload.page) { // PagedModel structure
-             batchLogs.value = backendPayload.content;
-            callback({
-              draw: dtParams.draw,
-              recordsTotal: backendPayload.page.totalElements,
-              recordsFiltered: backendPayload.page.totalElements,
-              data: backendPayload.content
-            });
-          }
-           else {
-            console.warn('Unexpected backend payload structure:', backendPayload);
+          } else {
+            console.warn('Unexpected backend payload structure for batch logs:', backendResponse);
             callback({ draw: dtParams.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
           }
         })
@@ -157,46 +163,64 @@ const fetchBatchLogs = async () => {
         });
       },
       columns: [
-        { data: 'jobName', defaultContent: '-' },
-        { data: 'jobInstanceId', defaultContent: '-', className: 'center-text' },
-        { data: 'status', defaultContent: '-', className: 'center-text' },
-        { data: 'startTime', defaultContent: '-', className: 'center-text', render: data => formatTime(data) },
-        { data: 'endTime', defaultContent: '-', className: 'center-text', render: data => formatTime(data) },
-        { data: 'exitMessage', defaultContent: '-' },
-        // { // Action column removed for now, can be added back if specific log actions are needed
-        //   data: null,
-        //   orderable: false,
-        //   searchable: false,
-        //   className: 'text-center',
-        //   render: function(data, type, row) {
-        //     // Add buttons for log-specific actions if any
-        //     return '';
-        //   }
-        // }
+        { data: 'id', title: 'ID', className: 'center-text', visible: false },
+        { data: 'jobName', title: 'Job Name', defaultContent: '-' },
+        { data: 'batchName', title: 'Batch Name', defaultContent: '-' },
+        { data: 'status', title: 'Status', className: 'center-text' },
+        { data: 'startTime', title: 'Start Time', className: 'center-text', render: data => formatTime(data) },
+        { data: 'endTime', title: 'End Time', className: 'center-text', render: data => formatTime(data) },
+        { data: 'exitCode', title: 'Exit Code', defaultContent: '-', className: 'center-text' },
+        {
+          data: 'exitMessage',
+          title: 'Exit Message',
+          defaultContent: '-',
+          render: function(data, type, row) {
+            if (type === 'display' && data && data.length > 50) {
+              return escapeHtml(data.substr(0, 50)) + '...';
+            }
+            return escapeHtml(data);
+          }
+        },
+        // { data: 'jobParameters', title: 'Parameters', defaultContent: '-' },
+        // { data: 'jobExecutionId', title: 'Job Execution ID', defaultContent: '-' },
+        // { data: 'metaId', title: 'Meta ID', defaultContent: '-' },
       ],
       initComplete: function() {
         const customSearchContainer = document.getElementById('customSearchContainer');
         if (customSearchContainer) {
-          customSearchContainer.innerHTML = `
-            <div class="input-group">
-              <input type="text" class="form-control custom-search-input" placeholder="검색 (Job Name, Message 등)">
-              <button class="btn btn-outline-secondary custom-search-button" type="button">검색</button>
-              <!-- Add button removed -->
-            </div>
-          `;
+          customSearchContainer.innerHTML =
+            '<div class="input-group">' +
+              '<select class="form-control custom-status-select me-2" style="width: auto; flex-grow: 0.3;">' +
+                '<option value="">All Statuses</option>' +
+                '<option value="STARTED">STARTED</option>' +
+                '<option value="COMPLETED">COMPLETED</option>' +
+                '<option value="FAILED">FAILED</option>' +
+                '<option value="STOPPED">STOPPED</option>' +
+                '<option value="UNKNOWN">UNKNOWN</option>' +
+              '</select>' +
+              '<input type="text" class="form-control custom-keyword-input" placeholder="Keyword 검색 (Job Name, Batch Name 등)">' +
+              '<button class="btn btn-outline-secondary custom-search-button" type="button">검색</button>' +
+            '</div>';
 
-          const searchInput = customSearchContainer.querySelector('.custom-search-input');
+          const statusSelect = customSearchContainer.querySelector('.custom-status-select') as HTMLSelectElement;
+          const keywordInput = customSearchContainer.querySelector('.custom-keyword-input') as HTMLInputElement;
           const searchButton = customSearchContainer.querySelector('.custom-search-button');
 
-          if (searchInput instanceof HTMLInputElement && searchButton) {
-            searchInput.addEventListener('keyup', (event) => {
-              searchInputValue.value = searchInput.value;
+          if (statusSelect && keywordInput && searchButton) {
+            statusSelect.addEventListener('change', () => {
+              searchStatus.value = statusSelect.value;
+              dataTable.value.ajax.reload();
+            });
+            keywordInput.addEventListener('keyup', (event) => {
               if (event.key === 'Enter') {
+                searchKeyword.value = keywordInput.value;
+                searchStatus.value = statusSelect.value;
                 dataTable.value.ajax.reload();
               }
             });
             searchButton.addEventListener('click', () => {
-              searchInputValue.value = searchInput.value;
+              searchKeyword.value = keywordInput.value;
+              searchStatus.value = statusSelect.value;
               dataTable.value.ajax.reload();
             });
           }
@@ -278,8 +302,17 @@ onMounted(() => {
 }
 
 :deep(.dataTables_length label),
-:deep(.dataTables_filter label) {
-  margin-bottom: 0; /* Align items vertically if they wrap */
+/* :deep(.dataTables_filter label) { Default filter is hidden */
+:deep(#customSearchContainer .form-label) { /* If using labels in custom search */
+  margin-bottom: 0;
+}
+
+/* Custom search styles */
+#customSearchContainer .input-group {
+  /* justify-content: flex-end; */ /* Align to right if needed */
+}
+#customSearchContainer .form-select.custom-status-select {
+    min-width: 150px; /* Adjust as needed */
 }
 
 /* Modal styles removed */

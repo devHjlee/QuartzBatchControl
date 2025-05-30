@@ -3,12 +3,12 @@ package com.quartzbatchcontrol.quartz.api.request;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
-@NoArgsConstructor
-@AllArgsConstructor
+@Setter
 public class QuartzLogSearchRequest {
-    private String jobName;
+    private String keyword;
     private String jobGroup;
     private String status;
 }

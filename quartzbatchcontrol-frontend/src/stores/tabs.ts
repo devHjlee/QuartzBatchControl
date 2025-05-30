@@ -73,7 +73,7 @@ export const useTabsStore = defineStore('tabs', {
         } else {
           this.activeTabId = null;
           // 모든 탭이 닫혔을 때 기본 페이지로 이동 (예: 대시보드)
-          // router.push('/dashboard'); // 이 부분은 프로젝트 정책에 따라 결정
+          router.push('/dashboard'); // 이 부분은 프로젝트 정책에 따라 결정
         }
       }
     },

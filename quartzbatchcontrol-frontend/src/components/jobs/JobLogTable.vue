@@ -61,6 +61,8 @@ interface QuartzLogPageResponse {
 const quartzLogs = ref<QuartzLogItem[]>([]);
 const dataTable = ref<any>(null);
 const searchInputValue = ref(''); // For searching logs
+const searchJobGroup = ref(''); // Job Group 검색을 위한 ref
+const searchStatus = ref(''); // Status 검색을 위한 ref
 
 // const route = useRoute(); // Removed, re-evaluate if specific routing logic is needed for logs
 // const router = useRouter(); // Removed
@@ -110,6 +112,8 @@ const fetchQuartzLogs = async () => {
             page: dtParams.start / dtParams.length,
             size: dtParams.length,
             keyword: searchInputValue.value, // Assuming QuartzLogSearchRequest uses 'keyword'
+            jobGroup: searchJobGroup.value, // Job Group 파라미터 추가
+            status: searchStatus.value, // Status 파라미터 추가
           }
         })
         .then(function (response) {
@@ -147,28 +151,58 @@ const fetchQuartzLogs = async () => {
         if (customSearchContainer) {
           customSearchContainer.innerHTML = `
             <div class="input-group">
+              <select class="form-control custom-job-group-select me-2" style="width: auto; flex-grow: 0.3;">
+                <option value="">All Job Groups</option>
+                <option value="BATCH">BATCH</option>
+                <option value="SIMPLE">SIMPLE</option>
+              </select>
+              <select class="form-control custom-status-select me-2" style="width: auto; flex-grow: 0.3;">
+                <option value="">All Statuses</option>
+                <option value="SUCCESS">SUCCESS</option>
+                <option value="FAILURE">FAILURE</option>
+                <option value="RUNNING">RUNNING</option>
+                <option value="UNKNOWN">UNKNOWN</option>
+                <!-- Quartz Job의 실제 가능한 상태값에 맞춰 옵션 추가/수정 필요 -->
+              </select>
               <input type="text" class="form-control custom-search-input" placeholder="Job Name, Message 검색">
               <button class="btn btn-outline-secondary custom-search-button" type="button">검색</button>
-              <!-- Add button removed -->
             </div>
           `;
 
-          const searchInput = customSearchContainer.querySelector('.custom-search-input');
+          const jobGroupSelect = customSearchContainer.querySelector('.custom-job-group-select') as HTMLSelectElement;
+          const statusSelect = customSearchContainer.querySelector('.custom-status-select') as HTMLSelectElement;
+          const searchInput = customSearchContainer.querySelector('.custom-search-input') as HTMLInputElement;
           const searchButton = customSearchContainer.querySelector('.custom-search-button');
 
-          if (searchInput instanceof HTMLInputElement && searchButton) {
-            // Restore searchInputValue if it was previously set (e.g. from URL query)
-            if(searchInputValue.value) {
-                searchInput.value = searchInputValue.value;
-            }
+          if (jobGroupSelect && statusSelect && searchInput && searchButton) {
+            // Restore search values if they were previously set
+            if(searchJobGroup.value) jobGroupSelect.value = searchJobGroup.value;
+            if(searchStatus.value) statusSelect.value = searchStatus.value;
+            if(searchInputValue.value) searchInput.value = searchInputValue.value;
+
+            jobGroupSelect.addEventListener('change', () => {
+              searchJobGroup.value = jobGroupSelect.value;
+              dataTable.value.ajax.reload();
+            });
+
+            statusSelect.addEventListener('change', () => {
+              searchStatus.value = statusSelect.value;
+              dataTable.value.ajax.reload();
+            });
+
             searchInput.addEventListener('keyup', (event) => {
-              searchInputValue.value = searchInput.value;
               if (event.key === 'Enter') {
+                searchInputValue.value = searchInput.value;
+                // 엔터 시 모든 검색 조건으로 검색
+                searchJobGroup.value = jobGroupSelect.value;
+                searchStatus.value = statusSelect.value;
                 dataTable.value.ajax.reload();
               }
             });
             searchButton.addEventListener('click', () => {
               searchInputValue.value = searchInput.value;
+              searchJobGroup.value = jobGroupSelect.value;
+              searchStatus.value = statusSelect.value;
               dataTable.value.ajax.reload();
             });
           }
