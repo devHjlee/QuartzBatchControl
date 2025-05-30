@@ -24,11 +24,11 @@ public class QuartzBatchExecutor implements org.quartz.Job {
             JobDataMap map = context.getMergedJobDataMap();
             batchJobService.executeBatchJob(map.getLong("batchMetaId"), "quartz");
 
-            log.info("[Quartz] Launching batch job: {}", map.getLong("batchMetaId"));
-
         } catch (Exception e) {
-            log.error("Batch execution failed", e);
-            throw new JobExecutionException(e);
+            log.error("QuartzBatchExecutor: Caught exception from BatchJobService. Type: {}, Message: {}" , e.getClass().getName(), e.getMessage(), e);
+            JobExecutionException jee = new JobExecutionException(e);
+            log.error("QuartzBatchExecutor: Throwing JobExecutionException. Original exception: ", e);
+            throw jee;
         }
     }
 }

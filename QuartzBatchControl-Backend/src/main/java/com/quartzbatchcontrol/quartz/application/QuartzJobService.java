@@ -54,6 +54,7 @@ public class QuartzJobService {
         }
 
         JobDetail jobDetail = JobBuilder.newJob(jobClass)
+                .storeDurably(true)
                 .withIdentity(request.getJobName(), request.getJobGroup())
                 .usingJobData(dataMap)
                 .build();

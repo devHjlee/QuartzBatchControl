@@ -50,6 +50,8 @@ public class BatchJobLogRepositoryImpl implements BatchJobLogRepositoryCustom{
                         keywordContains(request.getKeyword()),
                         statusContains(request.getStatus())
                 )
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
                 .orderBy(batchJobLog.startTime.desc())
                 .fetch();
 

@@ -28,10 +28,12 @@ public class BatchJobLogService {
     public Page<BatchLogResponse> getAllBatchLogs(BatchLogSearchRequest request, Pageable pageable) {
         return batchJobLogRepository.findBySearchLog(request, pageable);
     }
+
     @Transactional
     public void startLog(JobExecution jobExecution) {
         try {
             Long metaId = jobExecution.getJobParameters().getLong("metaId");
+            String executedBy = jobExecution.getJobParameters().getString("executedBy");
             // 시작 시점에 로그 생성
             BatchJobLog log = BatchJobLog.builder()
                     .jobExecutionId(jobExecution.getId())
@@ -40,6 +42,7 @@ public class BatchJobLogService {
                     .startTime(LocalDateTime.now())
                     .status("STARTED")
                     .jobParameters(objectMapper.writeValueAsString(jobExecution.getJobParameters().getParameters()))
+                    .executedBy(executedBy)
                     .build();
 
             // 로그 저장 후 JobExecution에 로그 ID 저장

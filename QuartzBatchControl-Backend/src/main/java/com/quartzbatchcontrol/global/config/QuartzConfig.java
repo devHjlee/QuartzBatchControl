@@ -33,7 +33,7 @@ public class QuartzConfig {
         SchedulerFactoryBean factory = new SchedulerFactoryBean();
         factory.setJobFactory(jobFactory);
         factory.setDataSource(dataSource);
-        factory.setOverwriteExistingJobs(true);
+        factory.setOverwriteExistingJobs(false);
         factory.setWaitForJobsToCompleteOnShutdown(true);
         factory.setGlobalJobListeners(jobListener);
         return factory;

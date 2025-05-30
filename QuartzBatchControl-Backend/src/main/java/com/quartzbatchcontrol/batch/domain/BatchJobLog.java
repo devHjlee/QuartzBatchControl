@@ -41,10 +41,13 @@ public class BatchJobLog {
     @Column(columnDefinition = "TEXT")
     private String jobParameters;
 
+    @Column(nullable = false)
+    private String executedBy;
+
     @Builder
     public BatchJobLog(Long jobExecutionId, String jobName, Long metaId, LocalDateTime startTime,
                        LocalDateTime endTime, String status, String exitCode,
-                       String exitMessage, String jobParameters) {
+                       String exitMessage, String jobParameters, String executedBy) {
         this.jobExecutionId = jobExecutionId;
         this.jobName = jobName;
         this.metaId = metaId;
@@ -54,6 +57,7 @@ public class BatchJobLog {
         this.exitCode = exitCode;
         this.exitMessage = exitMessage;
         this.jobParameters = jobParameters;
+        this.executedBy = executedBy;
     }
 
     public void update(String status, String exitCode, String exitMessage) {

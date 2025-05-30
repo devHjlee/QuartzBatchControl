@@ -36,7 +36,7 @@ public class QuartzJobExecutionLogRepositoryImpl implements QuartzJobExecutionLo
                 ))
                 .from(quartzLog)
                 .where(
-                        jobNameContains(request.getJobName()),
+                        jobNameContains(request.getKeyword()),
                         jobGroupEquals(request.getJobGroup()),
                         statusEquals(request.getStatus())
                         // TODO: 기간 검색 조건 추가 시 여기에 메소드 호출 추가
@@ -51,7 +51,7 @@ public class QuartzJobExecutionLogRepositoryImpl implements QuartzJobExecutionLo
                 .select(quartzLog.count())
                 .from(quartzLog)
                 .where(
-                        jobNameContains(request.getJobName()),
+                        jobNameContains(request.getKeyword()),
                         jobGroupEquals(request.getJobGroup()),
                         statusEquals(request.getStatus())
                 )

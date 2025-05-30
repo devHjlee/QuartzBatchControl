@@ -19,8 +19,9 @@ CREATE TABLE batch_job_execution_log (
                                end_time DATETIME DEFAULT NULL,
                                status VARCHAR(255) NOT NULL,
                                exit_code VARCHAR(255) DEFAULT NULL,
-                               exit_message VARCHAR(255) DEFAULT NULL,
-                               job_parameters TEXT DEFAULT NULL
+                               exit_message TEXT DEFAULT NULL,
+                               job_parameters TEXT DEFAULT NULL,
+                               executed_by VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE quartz_job_meta (

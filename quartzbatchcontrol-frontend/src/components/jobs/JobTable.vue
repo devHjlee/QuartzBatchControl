@@ -389,6 +389,8 @@ const fetchAvailableBatchMetas = async () => {
 };
 
 const openAddQuartzJobModal = () => {
+  isEditMode.value = false; // 수정 모드 비활성화
+  currentEditingJobId.value = null; // 수정 중인 Job ID 초기화
   newQuartzJobForm.value = {
     jobType: 'SIMPLE',
     jobName: '', // jobNameInput에서 jobName으로 변경

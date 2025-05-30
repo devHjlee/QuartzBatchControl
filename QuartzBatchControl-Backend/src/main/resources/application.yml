@@ -19,7 +19,6 @@ spring:
     jdbc:
       initialize-schema: never
     wait-for-jobs-to-complete-on-shutdown: true
-    overwrite-existing-jobs: true
     properties:
       org:
         quartz:

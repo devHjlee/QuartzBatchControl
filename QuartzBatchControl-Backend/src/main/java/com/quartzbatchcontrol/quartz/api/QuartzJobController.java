@@ -52,7 +52,7 @@ public class QuartzJobController {
         return ResponseEntity.ok(ApiResponse.success("Job 등록을 완료 했습니다."));
     }
 
-    @PutMapping
+    @PostMapping("/update")
     public ResponseEntity<ApiResponse<String>> updateJob(@Valid @RequestBody QuartzJobRequest request,
                                                        @AuthenticationPrincipal UserPrincipal userPrincipal) {
         quartzJobService.updateJob(request, userPrincipal.getUsername());
