@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class QuartzCountResponse {
     private long quartzCount;
-    private long waitCount;
+    private long waitingCount;
+    private long acquiredCount;
     private long pausedCount;
-    private long CompletedCount;
+    private long blockedCount;
 }

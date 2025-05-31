@@ -17,8 +17,8 @@ const routes = [
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundView, meta: { title: '페이지 없음' } },
   { path: '/batch', name: 'Batch 관리', component: BatchView, meta: { requiresAuth: true, title: 'Batch 관리', closable: true } },
   { path: '/job', name: 'Quartz 관리', component: JobView, meta: { requiresAuth: true, title: 'Quartz Job 관리', closable: true } },
-  { path: '/batch-log', name: 'Batch Log 관리', component: BatchLogView, meta: { requiresAuth: true, title: 'Batch Log 관리', closable: true } },
-  { path: '/job-log', name: 'Job Log 관리', component: JobLogView, meta: { requiresAuth: true, title: 'Job Log 관리', closable: true } },
+  { path: '/batch-log', name: 'Batch Log', component: BatchLogView, meta: { requiresAuth: true, title: 'Batch Log 관리', closable: true } },
+  { path: '/job-log', name: 'Job Log', component: JobLogView, meta: { requiresAuth: true, title: 'Job Log 관리', closable: true } },
 ]
 
 const router = createRouter({
