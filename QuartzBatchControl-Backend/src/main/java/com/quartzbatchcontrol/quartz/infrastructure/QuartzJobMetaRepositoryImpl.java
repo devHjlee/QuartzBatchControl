@@ -1,6 +1,7 @@
 package com.quartzbatchcontrol.quartz.infrastructure;
 
 import com.quartzbatchcontrol.batch.domain.QBatchJobMeta;
+import com.quartzbatchcontrol.dashboard.api.response.QuartzCountResponse;
 import com.quartzbatchcontrol.quartz.api.response.QuartzJobMetaSummaryResponse;
 import com.quartzbatchcontrol.quartz.domain.QQuartzCronTriggerView;
 import com.quartzbatchcontrol.quartz.domain.QQuartzJobDetailView;
@@ -8,6 +9,7 @@ import com.quartzbatchcontrol.quartz.domain.QQuartzJobMeta;
 import com.quartzbatchcontrol.quartz.domain.QQuartzTriggerView;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,7 +21,7 @@ import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
-public class QuartzJobMetaRepositoryImpl implements QuartzJobMetaRepositoryCustom{
+public class QuartzJobMetaRepositoryImpl implements QuartzJobMetaRepositoryCustom {
     private final JPAQueryFactory jpaQueryFactory;
     private final QQuartzJobMeta quartzJobMeta = QQuartzJobMeta.quartzJobMeta;
     private final QQuartzJobDetailView quartzJobDetailView = QQuartzJobDetailView.quartzJobDetailView;
@@ -92,6 +94,37 @@ public class QuartzJobMetaRepositoryImpl implements QuartzJobMetaRepositoryCusto
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
+    }
+
+    @Override
+    public QuartzCountResponse findQuartzJobCount() {
+        return jpaQueryFactory
+                .select(Projections.constructor(
+                        QuartzCountResponse.class,
+                        quartzTriggerView.count(),
+                        new CaseBuilder()
+                                .when(quartzTriggerView.triggerState.eq("WAITING"))
+                                .then(1L)
+                                .otherwise(0L)
+                                .sum(),
+                        new CaseBuilder()
+                                .when(quartzTriggerView.triggerState.eq("ACQUIRED"))
+                                .then(1L)
+                                .otherwise(0L)
+                                .sum(),
+                        new CaseBuilder()
+                                .when(quartzTriggerView.triggerState.eq("PAUSED"))
+                                .then(1L)
+                                .otherwise(0L)
+                                .sum(),
+                        new CaseBuilder()
+                                .when(quartzTriggerView.triggerState.eq("BLOCKED"))
+                                .then(1L)
+                                .otherwise(0L)
+                                .sum()
+                ))
+                .from(quartzTriggerView)
+                .fetchOne();
     }
 
     private BooleanExpression containsKeyword(String keyword) {

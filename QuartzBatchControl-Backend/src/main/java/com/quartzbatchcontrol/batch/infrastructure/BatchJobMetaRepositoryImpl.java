@@ -2,9 +2,11 @@ package com.quartzbatchcontrol.batch.infrastructure;
 
 import com.quartzbatchcontrol.batch.api.response.BatchJobMetaSummaryResponse;
 import com.quartzbatchcontrol.batch.domain.QBatchJobMeta;
+import com.quartzbatchcontrol.dashboard.api.response.BatchCountResponse;
 import com.quartzbatchcontrol.quartz.domain.QQuartzJobMeta;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +63,25 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
+    }
+
+    @Override
+    public BatchCountResponse findBatchCount() {
+        return queryFactory
+                .select(Projections.constructor(
+                        BatchCountResponse.class,
+                        batchJobMeta.count(),
+                        new CaseBuilder()
+                                .when(quartzJobMeta.batchMetaId.isNotNull())
+                                .then(1L)
+                                .otherwise(0L)
+                                .sum()
+                ))
+                .from(batchJobMeta)
+                .leftJoin(quartzJobMeta).on(
+                        batchJobMeta.id.eq(quartzJobMeta.batchMetaId)
+                )
+                .fetchOne();
     }
 
     private BooleanExpression keywordContains(String keyword) {

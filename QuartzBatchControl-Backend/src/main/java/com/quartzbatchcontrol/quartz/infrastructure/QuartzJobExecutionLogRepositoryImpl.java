@@ -1,10 +1,12 @@
 package com.quartzbatchcontrol.quartz.infrastructure;
 
+import com.quartzbatchcontrol.dashboard.api.response.DailyStatusCountResponse;
 import com.quartzbatchcontrol.quartz.api.request.QuartzLogSearchRequest;
 import com.quartzbatchcontrol.quartz.api.response.QuartzLogResponse;
 import com.quartzbatchcontrol.quartz.domain.QQuartzJobExecutionLog; // QueryDSL Q-Type
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -60,6 +64,34 @@ public class QuartzJobExecutionLogRepositoryImpl implements QuartzJobExecutionLo
         long totalCount = (total == null) ? 0L : total;
 
         return new PageImpl<>(content, pageable, totalCount);
+    }
+
+    @Override
+    public DailyStatusCountResponse findQuartzStateCount() {
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfToday = today.atStartOfDay();
+        LocalDateTime startOfTomorrow = today.plusDays(1).atStartOfDay();
+
+        return queryFactory
+                .select(Projections.constructor(
+                        DailyStatusCountResponse.class,
+                        new CaseBuilder()
+                                .when(quartzLog.status.eq("SUCCESS"))
+                                .then(1L)
+                                .otherwise(0L)
+                                .sum(),
+                        new CaseBuilder()
+                                .when(quartzLog.status.eq("FAIL"))
+                                .then(1L)
+                                .otherwise(0L)
+                                .sum()
+                ))
+                .from(quartzLog)
+                .where(
+                        quartzLog.startTime.goe(startOfToday)
+                                .and(quartzLog.startTime.lt(startOfTomorrow))
+                )
+                .fetchOne();
     }
 
     private BooleanExpression jobNameContains(String jobName) {

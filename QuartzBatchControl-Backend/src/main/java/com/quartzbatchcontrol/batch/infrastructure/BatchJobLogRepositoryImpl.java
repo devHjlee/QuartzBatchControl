@@ -4,8 +4,10 @@ import com.quartzbatchcontrol.batch.api.request.BatchLogSearchRequest;
 import com.quartzbatchcontrol.batch.api.response.BatchLogResponse;
 import com.quartzbatchcontrol.batch.domain.QBatchJobLog;
 import com.quartzbatchcontrol.batch.domain.QBatchJobMeta;
+import com.quartzbatchcontrol.dashboard.api.response.DailyStatusCountResponse;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -14,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -71,6 +75,34 @@ public class BatchJobLogRepositoryImpl implements BatchJobLogRepositoryCustom{
         long totalCount = (total == null) ? 0L : total;
 
         return new PageImpl<>(content, pageable, totalCount);
+    }
+
+    @Override
+    public DailyStatusCountResponse findBatchLogCount() {
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfToday = today.atStartOfDay();
+        LocalDateTime startOfTomorrow = today.plusDays(1).atStartOfDay();
+
+        return queryFactory
+                .select(Projections.constructor(
+                        DailyStatusCountResponse.class,
+                        new CaseBuilder()
+                                .when(batchJobLog.status.eq("COMPLETED"))
+                                .then(1L)
+                                .otherwise(0L)
+                                .sum(),
+                        new CaseBuilder()
+                                .when(batchJobLog.status.eq("FAILED"))
+                                .then(1L)
+                                .otherwise(0L)
+                                .sum()
+                    ))
+                .from(batchJobLog)
+                .where(
+                        batchJobLog.startTime.goe(startOfToday)
+                                .and(batchJobLog.startTime.lt(startOfTomorrow))
+                )
+                .fetchOne();
     }
 
     private BooleanExpression keywordContains(String keyword) {

@@ -154,7 +154,7 @@ const fetchQuartzLogs = async () => {
               <select class="form-control custom-job-group-select me-2" style="width: auto; flex-grow: 0.3;">
                 <option value="">All Job Groups</option>
                 <option value="BATCH">BATCH</option>
-                <option value="SIMPLE">SIMPLE</option>
+                <option value="UTIL">SIMPLE</option>
               </select>
               <select class="form-control custom-status-select me-2" style="width: auto; flex-grow: 0.3;">
                 <option value="">All Statuses</option>
