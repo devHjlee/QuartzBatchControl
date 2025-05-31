@@ -105,7 +105,7 @@ const fetchBatchLogs = async () => {
       dataTable.value.destroy()
     }
 
-    dataTable.value = window.jQuery('#batchLogTable').DataTable({
+    dataTable.value = (window as any).jQuery('#batchLogTable').DataTable({
       paging: true,
       searching: false, // DataTables 자체 검색 비활성화
       info: true,
@@ -167,14 +167,14 @@ const fetchBatchLogs = async () => {
         { data: 'jobName', title: 'Job Name', defaultContent: '-' },
         { data: 'batchName', title: 'Batch Name', defaultContent: '-' },
         { data: 'status', title: 'Status', className: 'center-text' },
-        { data: 'startTime', title: 'Start Time', className: 'center-text', render: data => formatTime(data) },
-        { data: 'endTime', title: 'End Time', className: 'center-text', render: data => formatTime(data) },
+        { data: 'startTime', title: 'Start Time', className: 'center-text', render: (data: any) => formatTime(data) },
+        { data: 'endTime', title: 'End Time', className: 'center-text', render: (data: any) => formatTime(data) },
         { data: 'exitCode', title: 'Exit Code', defaultContent: '-', className: 'center-text' },
         {
           data: 'exitMessage',
           title: 'Exit Message',
           defaultContent: '-',
-          render: function(data, type, row) {
+          render: function(data: any, type: any, row: any) {
             if (type === 'display' && data && data.length > 50) {
               return escapeHtml(data.substr(0, 50)) + '...';
             }
@@ -188,6 +188,7 @@ const fetchBatchLogs = async () => {
       initComplete: function() {
         const customSearchContainer = document.getElementById('customSearchContainer');
         if (customSearchContainer) {
+          customSearchContainer.classList.remove('col-sm-12', 'col-md-6');
           customSearchContainer.innerHTML =
             '<div class="input-group">' +
               '<select class="form-control custom-status-select me-2" style="width: auto; flex-grow: 0.3;">' +
@@ -305,11 +306,19 @@ onMounted(() => {
 }
 
 /* Custom search styles */
-#customSearchContainer .input-group {
-  /* justify-content: flex-end; */ /* Align to right if needed */
+:deep(#customSearchContainer .input-group) {
+  width: 100% !important;
+  display: flex !important;
 }
-#customSearchContainer .form-select.custom-status-select {
-    min-width: 150px; /* Adjust as needed */
+
+:deep(#customSearchContainer .custom-keyword-input) { /* BatchLogTable은 custom-keyword-input 사용 */
+  flex-grow: 1 !important;
+}
+
+:deep(#customSearchContainer .custom-status-select),
+:deep(#customSearchContainer .custom-search-button) {
+  flex-grow: 0;
+  flex-shrink: 0;
 }
 
 /* Modal styles removed */

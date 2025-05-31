@@ -243,7 +243,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
       dataTable.value.destroy()
     }
 
-    dataTable.value = window.jQuery('#batchMetaTable').DataTable({
+    dataTable.value = (window as any).jQuery('#batchMetaTable').DataTable({
       paging: true,
       searching: false, // Disable DataTables default search, we'll use a custom one
       info: true,
@@ -269,7 +269,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
         },
         processing: '데이터를 불러오는 중...',
       },
-      ajax: function (dtParams, callback, settings) {
+      ajax: function (dtParams: any, callback: any, settings: any) {
         axios.get('/batch', {
           params: {
             page: dtParams.start / dtParams.length,
@@ -305,7 +305,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
           orderable: false,
           searchable: false,
           className: 'text-center',
-          render: function(data, type, row) {
+          render: function(data: any, type: any, row: any) {
             if (data === true) {
               return `<a href="#" class="btn btn-success btn-circle btn-sm action-view-job" data-meta-name="${row.metaName}" title="Job 상세 보기"><i class="fas fa-check"></i></a>`;
             }
@@ -318,7 +318,7 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
           orderable: false,
           searchable: false,
           className: 'text-center',
-          render: function(data, type, row) {
+          render: function(data: any, type: any, row: any) {
             let buttons = '';
             // 수정 버튼 (Font Awesome 아이콘 및 btn-circle 적용)
             buttons += `<button class="btn btn-sm btn-primary btn-circle action-edit me-1" data-job-id="${row.id}" title="수정"><i class="fas fa-edit"></i></button>`;
@@ -331,6 +331,9 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
       initComplete: function() {
         const customSearchContainer = document.getElementById('customSearchContainer');
         if (customSearchContainer) {
+          // Remove Bootstrap column classes if they exist on customSearchContainer itself
+          customSearchContainer.classList.remove('col-sm-12', 'col-md-6');
+
           customSearchContainer.innerHTML = `
             <div class="input-group">
               <input type="text" class="form-control custom-search-input" placeholder="검색">
@@ -464,7 +467,7 @@ const handleSaveBatchJob = async () => {
     alert('저장되었습니다.');
     closeParametersModal();
     fetchBatchJobs();
-  } catch (error) {
+  } catch (error: any) {
     alert(error.response?.data?.message || '작업 실행 중 오류가 발생했습니다.');
   }
 }
@@ -777,20 +780,18 @@ onMounted(() => {
 }
 
 /* Custom search styles */
-#customSearchContainer .input-group {
-  /*justify-content: flex-end; /* Aligns group to the right if needed, but DataTables places it */
+:deep(#customSearchContainer .input-group) {
+  width: 100% !important;
+  display: flex !important;
 }
 
-#customSearchContainer .custom-search-input {
-  /* Adjust width as needed */
-  /* flex-grow: 1; /* Allows input to take available space */
+:deep(#customSearchContainer .custom-search-input) {
+  flex-grow: 1 !important;
 }
 
-#customSearchContainer .custom-search-button {
-  /* margin-left: 0.5rem; */
-}
-
-#customSearchContainer .custom-add-button {
-  /* margin-left: 0.5rem; /* Spacing from search button */
+:deep(#customSearchContainer .custom-search-button),
+:deep(#customSearchContainer .custom-add-button) {
+  flex-grow: 0;
+  flex-shrink: 0;
 }
 </style>

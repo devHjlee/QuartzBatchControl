@@ -80,7 +80,7 @@ const fetchQuartzLogs = async () => {
       dataTable.value.destroy();
     }
 
-    dataTable.value = window.jQuery('#quartzLogTable').DataTable({
+    dataTable.value = (window as any).jQuery('#quartzLogTable').DataTable({
       paging: true,
       searching: false, // Using custom search input
       info: true,
@@ -106,7 +106,7 @@ const fetchQuartzLogs = async () => {
         },
         processing: '데이터를 불러오는 중...',
       },
-      ajax: function (dtParams, callback, settings) {
+      ajax: function (dtParams: any, callback: any, settings: any) {
         axios.get('/quartz-log', { // API endpoint for Quartz Logs
           params: {
             page: dtParams.start / dtParams.length,
@@ -140,8 +140,8 @@ const fetchQuartzLogs = async () => {
         { data: 'id', className: 'center-text' },
         { data: 'jobName' },
         { data: 'jobGroup', className: 'center-text' },
-        { data: 'startTime', className: 'center-text', render: data => formatTime(data) },
-        { data: 'endTime', className: 'center-text', render: data => formatTime(data) },
+        { data: 'startTime', className: 'center-text', render: (data: any) => formatTime(data) },
+        { data: 'endTime', className: 'center-text', render: (data: any) => formatTime(data) },
         { data: 'status', className: 'center-text' },
         { data: 'message', defaultContent: '-' }
         // Action column removed as logs are typically view-only
@@ -149,6 +149,7 @@ const fetchQuartzLogs = async () => {
       initComplete: function() {
         const customSearchContainer = document.getElementById('customLogSearchContainer');
         if (customSearchContainer) {
+          customSearchContainer.classList.remove('col-sm-12', 'col-md-6');
           customSearchContainer.innerHTML = `
             <div class="input-group">
               <select class="form-control custom-job-group-select me-2" style="width: auto; flex-grow: 0.3;">
@@ -308,7 +309,19 @@ onMounted(() => {
 /* Modal related styles removed */
 
 /* Custom search styles */
-#customLogSearchContainer .input-group {}
+:deep(#customLogSearchContainer .input-group) {
+  width: 100% !important;
+  display: flex !important;
+}
 
-#customLogSearchContainer .custom-search-input {}
+:deep(#customLogSearchContainer .custom-search-input) { /* JobLogTable은 custom-search-input 사용 */
+  flex-grow: 1 !important;
+}
+
+:deep(#customLogSearchContainer .custom-job-group-select),
+:deep(#customLogSearchContainer .custom-status-select),
+:deep(#customLogSearchContainer .custom-search-button) {
+  flex-grow: 0;
+  flex-shrink: 0;
+}
 </style>

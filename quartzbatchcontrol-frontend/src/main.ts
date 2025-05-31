@@ -10,31 +10,19 @@ import 'bootstrap'; // Bootstrap JS
 import 'datatables.net'; // DataTables 코어 JS
 import 'datatables.net-bs4'; // DataTables Bootstrap 4 통합 JS
 
-import Chart from 'chart.js/auto'; // Revert to chart.js/auto
-(window as any).Chart = Chart; // 전역으로 Chart 객체 할당
+import Chart from 'chart.js/auto'; // 임시 주석 처리 -> 주석 해제
+(window as any).Chart = Chart; // 임시 주석 처리 -> 주석 해제
 
-// Bootstrap CSS
-import 'bootstrap/dist/css/bootstrap.min.css';
+// CSS 임포트 순서 조정 시작
+import 'bootstrap/dist/css/bootstrap.min.css'; // 1. Bootstrap 기본
+import '@fortawesome/fontawesome-free/css/all.min.css'; // 2. Font Awesome
+import 'datatables.net-bs4/css/dataTables.bootstrap4.min.css'; // 3. DataTables Bootstrap 4 테마
+import '@/assets/sb-admin-2/css/sb-admin-2.min.css'; // 4. SB Admin 2 테마
 
-// Font Awesome
-import '@fortawesome/fontawesome-free/css/all.min.css';
+// Chart.js CSS는 Chart.js가 직접 로드하거나, 필요시 여기에 추가
 
-// SB Admin 2 Theme CSS
-import '@/assets/sb-admin-2/css/sb-admin-2.min.css';
-
-// DataTables CSS (Bootstrap 4용)
-import 'datatables.net-bs4/css/dataTables.bootstrap4.min.css';
-
-// Chart.js (필요하다면)
-// import 'chart.js'; // Chart.js는 보통 컴포넌트 레벨에서 import하거나, 전역으로 사용하려면 여기서 import
-
-// SB Admin 2 Theme JS (jQuery와 Bootstrap이 로드된 후)
-// 이 파일이 전역 jQuery($)를 사용하므로, jQuery가 먼저 import 되어야 합니다.
-// 또한, 이 JS가 DOM 요소를 조작한다면 Vue 앱이 마운트된 후에 실행되도록 하거나,
-// Vue 방식으로 로직을 재작성하는 것을 고려해야 합니다.
-// 우선은 import 해봅니다.
-// import '@/assets/sb-admin-2/vendor/jquery/jquery.min.js'
-// import '@/assets/sb-admin-2/vendor/datatables/dataTables.bootstrap4.css'
+// 이전에 주석 처리된 SB Admin 2 Theme JS 로드 부분은 App.vue에서 동적으로 로드 중이므로 여기서는 주석 유지
+// import '@/assets/sb-admin-2/js/sb-admin-2.min.js';
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
