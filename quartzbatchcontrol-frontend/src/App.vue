@@ -1,6 +1,6 @@
 <!-- src/App.vue -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useTabsStore } from '@/stores/tabs'
 import Sidebar from '@/components/layout/Sidebar.vue'
@@ -13,6 +13,18 @@ const authStore = useAuthStore()
 const tabsStore = useTabsStore()
 
 const isAuthenticated = computed(() => authStore.isLoggedIn)
+
+onMounted(async () => {
+  if (!(window as any).sbAdmin2Initialized) {
+    try {
+      await import('@/assets/sb-admin-2/js/sb-admin-2.min.js');
+      (window as any).sbAdmin2Initialized = true;
+      console.log('sb-admin-2.min.js loaded dynamically.');
+    } catch (error) {
+      console.error('Failed to load sb-admin-2.min.js dynamically:', error);
+    }
+  }
+});
 </script>
 
 <template>

@@ -10,8 +10,8 @@ export default defineConfig({
     },
   },
   define: {
-    'window.jQuery': 'jQuery',
-    'window.$': 'jQuery'
+    // 'window.jQuery': 'jQuery',
+    // 'window.$': 'jQuery'
   },
   server: {
     proxy: {
