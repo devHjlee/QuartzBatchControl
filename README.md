@@ -196,22 +196,42 @@ flowchart LR
 
 
 ## API 문서
-### 배치 작업 API
-- GET /api/batch/jobs - 배치 작업 목록 조회
-- POST /api/batch/jobs - 배치 작업 등록
-- PUT /api/batch/jobs/{id} - 배치 작업 수정
-- POST /api/batch/jobs/{id}/execute - 배치 작업 실행
-- GET /api/batch/logs - 배치 로그 조회
+Springdoc OpenAPI (Swagger)를 통해 API 문서를 확인할 수 있습니다. 애플리케이션 실행 후, 웹 브라우저에서 `/swagger-ui.html` 경로로 접속하세요.
 
-### Quartz 작업 API
-- GET /api/quartz/jobs - Quartz 작업 목록 조회
-- POST /api/quartz/jobs - Quartz 작업 등록
-- PUT /api/quartz/jobs/{id} - Quartz 작업 수정
-- POST /api/quartz/jobs/{id}/execute - Quartz 작업 실행
-- POST /api/quartz/jobs/{id}/pause - Quartz 작업 일시정지
-- POST /api/quartz/jobs/{id}/resume - Quartz 작업 재개
-- DELETE /api/quartz/jobs/{id} - Quartz 작업 삭제
-- GET /api/quartz/logs - Quartz 로그 조회
+### 대시보드 API (`/api/dashboard`)
+- GET `/batchCount` - Batch Job 통계 조회
+- GET `/batchLogCount` - Batch Log 통계 조회
+- GET `/quartzCount` - Quartz 작업 통계 조회
+- GET `/quartzLogCount` - Quartz 로그 통계 조회
+
+### 배치 작업 API (`/api/batch`)
+- GET `/` - 배치 Job 메타데이터 목록 조회 (페이지네이션)
+- GET `/{metaId}` - 배치 Job 상세 조회
+- GET `/available` - 사용 가능한 배치 Job 목록 조회
+- GET `/all` - 모든 배치 Job 메TA데이터 조회 (리스트)
+- POST `/` - 배치 Job 등록
+- PUT `/` - 배치 Job 수정
+- POST `/execute/{metaId}` - 배치 Job 실행
+
+### 배치 로그 API (`/api/batch-log`)
+- GET `/` - 배치 Log 목록 조회
+
+### Quartz 작업 API (`/api/quartz-jobs`)
+- GET `/` - Quartz Job 메타데이터 목록 조회 (페이지네이션)
+- GET `/preview-schedule` - CRON 표현식 다음 실행 시간 미리보기
+- POST `/` - Quartz Job 생성
+- POST `/update` - Quartz Job 수정
+- GET `/delete/{metaId}` - Quartz Job 삭제
+- GET `/pause/{metaId}` - Quartz Job 일시정지
+- GET `/resume/{metaId}` - Quartz Job 재개
+- GET `/trigger/{metaId}` - Quartz Job 즉시 실행
+
+### Quartz 로그 API (`/api/quartz-log`)
+- GET `/` - Quartz Log 목록 조회
+
+### 사용자 인증 API (`/api/auth`)
+- POST `/signup` - 회원가입
+- POST `/login` - 로그인
 
 ## 설치 및 실행
 ### 요구사항
