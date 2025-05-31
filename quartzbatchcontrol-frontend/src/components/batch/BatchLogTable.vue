@@ -192,11 +192,8 @@ const fetchBatchLogs = async () => {
             '<div class="input-group">' +
               '<select class="form-control custom-status-select me-2" style="width: auto; flex-grow: 0.3;">' +
                 '<option value="">All Statuses</option>' +
-                '<option value="STARTED">STARTED</option>' +
                 '<option value="COMPLETED">COMPLETED</option>' +
                 '<option value="FAILED">FAILED</option>' +
-                '<option value="STOPPED">STOPPED</option>' +
-                '<option value="UNKNOWN">UNKNOWN</option>' +
               '</select>' +
               '<input type="text" class="form-control custom-keyword-input" placeholder="Keyword 검색 (Job Name, Batch Name 등)">' +
               '<button class="btn btn-outline-secondary custom-search-button" type="button">검색</button>' +
