@@ -193,7 +193,7 @@ const fetchQuartzJobs = async () => {
       router.replace({ path: currentPath, query: currentQuery });
     }
 
-    dataTable.value = window.jQuery('#quartzMetaTable').DataTable({
+    dataTable.value = (window as any).jQuery('#quartzMetaTable').DataTable({
       paging: true,
       searching: false,
       info: true,
@@ -219,7 +219,7 @@ const fetchQuartzJobs = async () => {
         },
         processing: '데이터를 불러오는 중...',
       },
-      ajax: function (dtParams, callback, settings) {
+      ajax: function (dtParams: any, callback: any, settings: any) {
         axios.get('/quartz-jobs', {
           params: {
             page: dtParams.start / dtParams.length,
@@ -256,14 +256,14 @@ const fetchQuartzJobs = async () => {
         {
           data: 'prevFireTime',
           className: 'text-center',
-          render: function(data) {
+          render: function(data: any) {
             return formatTime(data);
           }
         },
         {
           data: 'nextFireTime',
           className: 'text-center',
-          render: function(data) {
+          render: function(data: any) {
             return formatTime(data);
           }
         },
@@ -273,7 +273,7 @@ const fetchQuartzJobs = async () => {
           orderable: false,
           searchable: false,
           className: 'text-center',
-          render: function(data, type, row: QuartzJobInfo) {
+          render: function(data: any, type: any, row: QuartzJobInfo) {
             let buttons = '';
             buttons += `<button class="btn btn-sm btn-info btn-circle action-trigger me-1" data-job-id="${row.id}" title="즉시 실행"><i class="fas fa-play"></i></button>`;
             buttons += `<button class="btn btn-sm btn-success btn-circle action-resume me-1" data-job-id="${row.id}" title="재개"><i class="fas fa-play-circle"></i></button>`;
@@ -287,10 +287,13 @@ const fetchQuartzJobs = async () => {
       initComplete: function() {
         const customSearchContainer = document.getElementById('customSearchContainer');
         if (customSearchContainer) {
+          // Remove Bootstrap column classes if they exist on customSearchContainer itself
+          customSearchContainer.classList.remove('col-sm-12', 'col-md-6');
+
           customSearchContainer.innerHTML = `
             <div class="input-group">
               <input type="text" class="form-control custom-search-input" placeholder="Job Name 검색">
-              <button class="btn btn-outline-secondary custom-search-button me-2" type="button">검색</button>
+              <button class="btn btn-outline-secondary custom-search-button mr-2" type="button">검색</button>
               <button class="btn btn-primary custom-add-button" type="button">추가</button>
             </div>
           `;
@@ -369,7 +372,7 @@ const fetchAvailableBatchMetas = async () => {
   try {
     const response = await axios.get('/batch/all'); // API 엔드포인트 확인 필요
     if (response.data && response.data.success && Array.isArray(response.data.data)) {
-      availableBatchMetas.value = response.data.data.map(item => ({ id: item.id, metaName: item.metaName }));
+      availableBatchMetas.value = response.data.data.map((item: any) => ({ id: item.id, metaName: item.metaName }));
       // BATCH 타입이 기본 선택이고, 데이터 로드 후 첫번째 항목 자동 선택 (선택사항)
       // if (newQuartzJobForm.value.jobType === 'BATCH' && availableBatchMetas.value.length > 0 && !newQuartzJobForm.value.selectedBatchMetaId) {
       //   newQuartzJobForm.value.selectedBatchMetaId = availableBatchMetas.value[0].id;
@@ -711,16 +714,19 @@ onMounted(() => {
 }
 
 /* Custom search styles */
-#customSearchContainer .input-group {
-  /*justify-content: flex-end; */
+:deep(#customSearchContainer .input-group) {
+  width: 100% !important;
+  display: flex !important;
 }
 
-#customSearchContainer .custom-search-input {
-  /* flex-grow: 1; */
+:deep(#customSearchContainer .custom-search-input) {
+  flex-grow: 1 !important;
 }
 
-#customSearchContainer .custom-search-button {
-  /* margin-left: 0.5rem; */
+:deep(#customSearchContainer .custom-search-button),
+:deep(#customSearchContainer .custom-add-button) {
+  flex-grow: 0;
+  flex-shrink: 0;
 }
 
 .modal-body {
