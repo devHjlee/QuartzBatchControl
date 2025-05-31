@@ -101,6 +101,7 @@ public class QuartzJobMetaRepositoryImpl implements QuartzJobMetaRepositoryCusto
         return jpaQueryFactory
                 .select(Projections.constructor(
                         QuartzCountResponse.class,
+                        quartzTriggerView.count(),
                         new CaseBuilder()
                                 .when(quartzTriggerView.triggerState.eq("WAITING"))
                                 .then(1L)
@@ -108,11 +109,6 @@ public class QuartzJobMetaRepositoryImpl implements QuartzJobMetaRepositoryCusto
                                 .sum(),
                         new CaseBuilder()
                                 .when(quartzTriggerView.triggerState.eq("ACQUIRED"))
-                                .then(1L)
-                                .otherwise(0L)
-                                .sum(),
-                        new CaseBuilder()
-                                .when(quartzTriggerView.triggerState.eq("EXECUTING"))
                                 .then(1L)
                                 .otherwise(0L)
                                 .sum(),
