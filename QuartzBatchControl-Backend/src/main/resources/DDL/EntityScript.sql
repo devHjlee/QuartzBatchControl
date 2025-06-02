@@ -1,5 +1,6 @@
 CREATE TABLE batch_job_meta (
                                 id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                batch_source VARCHAR(20) NOT NULL,
                                 job_name VARCHAR(255) NOT NULL,
                                 meta_name VARCHAR(255) NOT NULL,
                                 job_description VARCHAR(500),

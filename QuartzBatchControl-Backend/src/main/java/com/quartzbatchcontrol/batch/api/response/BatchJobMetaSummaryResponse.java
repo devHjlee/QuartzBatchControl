@@ -1,5 +1,6 @@
 package com.quartzbatchcontrol.batch.api.response;
 
+import com.quartzbatchcontrol.batch.enums.BatchSource;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 @Builder
 public class BatchJobMetaSummaryResponse {
     private final Long id;
+    private final BatchSource batchSource;
     private final String jobName;
     private final String metaName;
     private final String jobDescription;
@@ -22,6 +24,7 @@ public class BatchJobMetaSummaryResponse {
 
     public BatchJobMetaSummaryResponse(
             Long id,
+            BatchSource batchSource,
             String jobName,
             String metaName,
             String jobDescription,
@@ -33,6 +36,7 @@ public class BatchJobMetaSummaryResponse {
             LocalDateTime updatedAt,
             boolean isRegisteredInQuartz) {
         this.id = id;
+        this.batchSource = batchSource;
         this.jobName = jobName;
         this.metaName = metaName;
         this.jobDescription = jobDescription;
@@ -44,4 +48,4 @@ public class BatchJobMetaSummaryResponse {
         this.updatedAt = updatedAt;
         this.isRegisteredInQuartz = isRegisteredInQuartz;
     }
-} 
+}

@@ -1,5 +1,6 @@
 package com.quartzbatchcontrol.batch.domain;
 
+import com.quartzbatchcontrol.batch.enums.BatchSource;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,6 +16,10 @@ public class BatchJobMeta {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "batch_source", nullable = false, length = 20)
+    private BatchSource batchSource;
 
     @Column(name = "meta_name", nullable = false)
     private String metaName;

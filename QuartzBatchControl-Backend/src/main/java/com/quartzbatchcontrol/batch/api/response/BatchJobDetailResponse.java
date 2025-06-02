@@ -1,6 +1,7 @@
 package com.quartzbatchcontrol.batch.api.response;
 
 import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
+import com.quartzbatchcontrol.batch.enums.BatchSource;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,6 +17,7 @@ import java.util.Map;
 @Builder
 public class BatchJobDetailResponse {
     private Long id;
+    private BatchSource batchSource;
     private String jobName;
     private String metaName;
     private String jobDescription;
@@ -26,9 +28,10 @@ public class BatchJobDetailResponse {
 
         return BatchJobDetailResponse.builder()
                 .id(entity.getId())
+                .batchSource(entity.getBatchSource())
                 .jobName(entity.getJobName())
                 .metaName(entity.getMetaName())
                 .jobParameters(entity.getJobParameters()) // 엔티티의 문자열 그대로 전달
                 .build();
     }
-} 
+}
