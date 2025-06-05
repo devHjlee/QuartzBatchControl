@@ -184,31 +184,31 @@ public class BatchJobService {
 
     private String executeExternalBatchJob(BatchJobMeta batchJobMeta, String userName) {
 
-        // TODO: 이 경로는 실제 환경에 맞게 설정하거나 외부 설정(application.properties 등)에서 읽어오도록 변경해야 합니다.
-        // 예시: "quartzbatchcontrol-batch/build/libs/quartzbatchcontrol-batch-0.0.1-SNAPSHOT.jar"
-        String batchJarPath = "path/to/your/batch.jar";
+        // TODO: 이 경로는 실제 환경에 맞게 설정하거나 외부 설정(application.properties 등)에서 읽어오도록 변경
+        String batchJarPath = "externaljob/quartzbatchcontrol-batch-0.0.1-SNAPSHOT.jar";
+
+        java.io.File jarFile = new java.io.File(batchJarPath);
+        if (!jarFile.exists() || !jarFile.isFile()) {
+            log.error("배치 JAR 파일을 찾을 수 없습니다: {}", batchJarPath);
+            throw new BusinessException(ErrorCode.BATCH_JOB_FAILED, "배치 JAR 파일을 찾을 수 없습니다: " + batchJarPath);
+        }
 
         try {
+            if (!checkExternalJobExists(batchJarPath, batchJobMeta.getJobName())) {
+                log.error("외부 배치 JAR '{}' 내에 잡 '{}'을(를) 찾을 수 없습니다.", batchJarPath, batchJobMeta.getJobName());
+
+                throw new BusinessException(ErrorCode.INVALID_JOB_CLASS,
+                        "외부 배치 JAR '" + batchJarPath + "' 내에 잡 '" + batchJobMeta.getJobName() + "'을(를) 찾을 수 없습니다.");
+            }
+
+
             List<String> command = new ArrayList<>();
             command.add("java");
             command.add("-jar");
             command.add(batchJarPath);
             command.add("--job.name=" + batchJobMeta.getJobName());
-            // Spring Batch는 JobParameters에 동일한 이름의 파라미터가 있으면 오류를 발생시키므로,
-            // BatchJobMeta의 id를 metaId로 전달하고, 실행자 정보도 명시적으로 전달합니다.
             command.add("--metaId=" + batchJobMeta.getId().toString());
             command.add("--executedBy=" + userName);
-
-
-            Map<String, Object> jobParamsMap = deserializeParams(batchJobMeta.getJobParameters());
-            if (jobParamsMap != null) {
-                for (Map.Entry<String, Object> entry : jobParamsMap.entrySet()) {
-                    // JobParametersConverter가 사용하는 기본 접두사 "--"를 사용하거나,
-                    // 외부 배치 애플리케이션이 파싱할 수 있는 형식으로 전달합니다.
-                    // 여기서는 "--key=value" 형식을 사용합니다.
-                    command.add("--" + entry.getKey() + "=" + entry.getValue().toString());
-                }
-            }
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             processBuilder.redirectErrorStream(true); // 표준 에러를 표준 출력으로 리다이렉션합니다.
@@ -218,7 +218,7 @@ public class BatchJobService {
             Process process = processBuilder.start();
 
             StringBuilder output = new StringBuilder();
-            // try-with-resources 구문을 사용하여 BufferedReader 자동 종료
+
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -249,6 +249,33 @@ public class BatchJobService {
             log.error("외부 배치 잡 실행 중 예상치 못한 오류 발생: {}", e.getMessage(), e);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "외부 배치 잡 실행 중 예상치 못한 오류: " + e.getMessage());
         }
+    }
+
+    private boolean checkExternalJobExists(String jarPath, String jobName) throws IOException, InterruptedException {
+        List<String> command = new ArrayList<>();
+        command.add("java");
+        command.add("-jar");
+        command.add(jarPath);
+        command.add("--validate-job=" + jobName); // 외부 배치에 추가한 검증 옵션
+
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        processBuilder.redirectErrorStream(true); // 에러 스트림도 같이 확인
+        log.info("외부 배치 잡 존재 여부 확인 실행: {}", String.join(" ", command));
+
+        Process process = processBuilder.start();
+        
+        StringBuilder output = new StringBuilder();
+        // try-with-resources 구문을 사용하여 BufferedReader 자동 종료
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append(System.lineSeparator());
+            }
+        }
+        
+        int exitCode = process.waitFor();
+        log.info("외부 배치 잡 존재 여부 확인 완료. 종료 코드: {}. 출력: {}", exitCode, output.toString().trim());
+        return exitCode == 0; // 종료 코드가 0이면 잡이 존재함
     }
 
     private boolean isValidJob(String jobName) {
