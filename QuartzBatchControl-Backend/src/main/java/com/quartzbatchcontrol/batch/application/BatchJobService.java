@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quartzbatchcontrol.batch.api.request.BatchJobMetaRequest;
 import com.quartzbatchcontrol.batch.api.response.BatchJobMetaResponse;
 import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
-import com.quartzbatchcontrol.batch.enums.BatchSource;
 import com.quartzbatchcontrol.batch.infrastructure.BatchJobMetaRepository;
 
 import com.quartzbatchcontrol.global.exception.BusinessException;
@@ -14,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.configuration.JobRegistry;
-import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.NoSuchJobException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -38,7 +36,7 @@ import com.quartzbatchcontrol.batch.api.response.BatchJobMetaSummaryResponse;
 @Service
 @RequiredArgsConstructor
 public class BatchJobService {
-    private final JobLauncher jobLauncher;
+
     private final JobRegistry jobRegistry;
     private final BatchJobMetaRepository batchJobMetaRepository;
     private final ObjectMapper objectMapper;
@@ -47,14 +45,12 @@ public class BatchJobService {
     public Page<BatchJobMetaSummaryResponse> getAllBatchJobMetas(String keyword, Pageable pageable) {
         Page<BatchJobMetaSummaryResponse> rawPage = batchJobMetaRepository.findBySearchCondition(keyword, pageable);
 
-        ObjectMapper mapper = new ObjectMapper();
-
         List<BatchJobMetaSummaryResponse> content = rawPage.getContent().stream()
                 .map(raw -> {
                     int count = 0;
                     try {
                         if (raw.getJobParameters() != null) {
-                            Map<String, Object> map = mapper.readValue(raw.getJobParameters(), new TypeReference<>() {});
+                            Map<String, Object> map = objectMapper.readValue(raw.getJobParameters(), new TypeReference<>() {});
                             count = map.size();
                         }
                     } catch (Exception e) {
@@ -63,7 +59,6 @@ public class BatchJobService {
 
                     return BatchJobMetaSummaryResponse.builder()
                             .id(raw.getId())
-                            .batchSource(raw.getBatchSource())
                             .jobName(raw.getJobName())
                             .metaName(raw.getMetaName())
                             .jobDescription(raw.getJobDescription())
@@ -112,7 +107,6 @@ public class BatchJobService {
 
         try {
             batchJobMetaRepository.save(BatchJobMeta.builder()
-                    .batchSource(request.getBatchSource())
                     .jobName(request.getJobName())
                     .metaName(request.getMetaName())
                     .jobDescription(request.getJobDescription())
@@ -161,31 +155,9 @@ public class BatchJobService {
         BatchJobMeta batchJobMeta = batchJobMetaRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
-        switch (batchJobMeta.getBatchSource()) {
-            case INTERNAL -> executeInternalBatchJob(batchJobMeta, userName);
-            case EXTERNAL -> executeExternalBatchJob(batchJobMeta, userName);
-        }
-    }
-
-    private void executeInternalBatchJob(BatchJobMeta batchJobMeta, String userName) {
-        try {
-            Job job = jobRegistry.getJob(batchJobMeta.getJobName());
-            JobParameters jobParameters = createJobParameters(batchJobMeta, userName);
-            JobExecution jobExecution = jobLauncher.run(job, jobParameters);
-
-            if (jobExecution.getStatus() == BatchStatus.FAILED) {
-                throw new BusinessException(ErrorCode.BATCH_JOB_FAILED);
-            }
-        } catch (Exception e) {
-            log.error("배치 작업 실행 중 오류 발생: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.BATCH_JOB_FAILED);
-        }
-    }
-
-    private String executeExternalBatchJob(BatchJobMeta batchJobMeta, String userName) {
 
         // TODO: 이 경로는 실제 환경에 맞게 설정하거나 외부 설정(application.properties 등)에서 읽어오도록 변경
-        String batchJarPath = "externaljob/quartzbatchcontrol-batch-0.0.1-SNAPSHOT.jar";
+        String batchJarPath = "externaljob/latest";
 
         java.io.File jarFile = new java.io.File(batchJarPath);
         if (!jarFile.exists() || !jarFile.isFile()) {
@@ -236,7 +208,7 @@ public class BatchJobService {
                         "외부 배치 잡 실행 실패. 종료 코드: " + exitCode);
             }
 
-            return output.toString().trim(); // 수집된 출력 반환
+            // output.toString().trim(); // 수집된 출력 반환
 
         } catch (IOException e) {
             log.error("외부 배치 잡 실행 중 IOException 발생: {}", e.getMessage(), e);
@@ -250,6 +222,7 @@ public class BatchJobService {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "외부 배치 잡 실행 중 예상치 못한 오류: " + e.getMessage());
         }
     }
+
 
     private boolean checkExternalJobExists(String jarPath, String jobName) throws IOException, InterruptedException {
         List<String> command = new ArrayList<>();

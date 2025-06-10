@@ -1,7 +1,6 @@
-package com.quartzbatchcontrol.batch.listener;
+package com.batchcontrol.listener;
 
-import com.quartzbatchcontrol.batch.application.BatchJobLogService;
-
+import com.batchcontrol.application.BatchJobLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.JobExecution;

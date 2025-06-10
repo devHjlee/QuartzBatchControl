@@ -31,7 +31,6 @@ public class BatchJobMetaRepositoryImpl implements BatchJobMetaRepositoryCustom 
                 .select(Projections.constructor(
                         BatchJobMetaSummaryResponse.class,
                         batchJobMeta.id,
-                        batchJobMeta.batchSource,
                         batchJobMeta.jobName,
                         batchJobMeta.metaName,
                         batchJobMeta.jobDescription,
