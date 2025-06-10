@@ -1,5 +1,6 @@
 package com.batchcontrol.job;
 
+import com.batchcontrol.listener.BatchJobExecutionListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -18,6 +19,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 @RequiredArgsConstructor
 public class SimpleJob {
+    private final BatchJobExecutionListener batchJobExecutionListener;
     // 1. Job 정의
     @Bean(name = "simpleBatchJobConfig")
     public Job simpleBatchJob(JobRepository jobRepository,
@@ -26,6 +28,7 @@ public class SimpleJob {
         return new JobBuilder("simpleBatchJob", jobRepository)
                 .start(simpleStepOne)
                 .next(simpleStepTwo)
+                .listener(batchJobExecutionListener)
                 .build();
     }
 

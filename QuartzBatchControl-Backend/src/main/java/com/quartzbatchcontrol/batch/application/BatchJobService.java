@@ -4,8 +4,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quartzbatchcontrol.batch.api.request.BatchJobMetaRequest;
 import com.quartzbatchcontrol.batch.api.response.BatchJobMetaResponse;
+import com.quartzbatchcontrol.batch.domain.BatchJobLog;
 import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
 import com.quartzbatchcontrol.batch.infrastructure.BatchJobCatalogRepository;
+import com.quartzbatchcontrol.batch.infrastructure.BatchJobLogRepository;
 import com.quartzbatchcontrol.batch.infrastructure.BatchJobMetaRepository;
 
 import com.quartzbatchcontrol.global.exception.BusinessException;
@@ -13,6 +15,7 @@ import com.quartzbatchcontrol.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -20,12 +23,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.quartzbatchcontrol.batch.api.response.BatchJobDetailResponse;
@@ -38,7 +46,14 @@ public class BatchJobService {
 
     private final BatchJobMetaRepository batchJobMetaRepository;
     private final BatchJobCatalogRepository batchJobCatalogRepository;
+    private final BatchJobLogRepository batchJobLogRepository;
     private final ObjectMapper objectMapper;
+
+    @Value("${batch.log.directory}")
+    private String logDirectory;
+
+    @Value("${batch.jar.path}")
+    private String batchJarPath;
 
     @Transactional(readOnly = true)
     public Page<BatchJobMetaSummaryResponse> getAllBatchJobMetas(String keyword, Pageable pageable) {
@@ -154,34 +169,31 @@ public class BatchJobService {
     @Transactional
     public void executeBatchJob(Long id, String userName) {
         BatchJobMeta batchJobMeta = batchJobMetaRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "BatchJobMeta not found: " + id));
 
-        // TODO: 이 경로는 실제 환경에 맞게 설정하거나 외부 설정(application.properties 등)에서 읽어오도록 변경
-        String batchJarPath = "externaljob/latest";
-
-        java.io.File jarFile = new java.io.File(batchJarPath);
-        if (!jarFile.exists() || !jarFile.isFile()) {
-            log.error("배치 JAR 파일을 찾을 수 없습니다: {}", batchJarPath);
-            throw new BusinessException(ErrorCode.BATCH_JOB_FAILED, "배치 JAR 파일을 찾을 수 없습니다: " + batchJarPath);
+        File jarFile = new File(batchJarPath);
+        if (!jarFile.exists() || !jarFile.canRead()) {
+            throw new BusinessException(ErrorCode.BATCH_JOB_FAILED, "JAR 링크가 깨졌거나 대상 파일이 없습니다.");
         }
 
-        try {
+        String runId = UUID.randomUUID().toString();
 
+        try {
             List<String> command = new ArrayList<>();
             command.add("java");
             command.add("-jar");
             command.add(batchJarPath);
             command.add("--job.name=" + batchJobMeta.getJobName());
-            command.add("--metaId=" + batchJobMeta.getId().toString());
-            command.add("--executedBy=" + userName);
+            command.add("metaId=" + batchJobMeta.getId());
+            command.add("executedBy=" + userName);
+            command.add("run.id=" + runId);
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
-            processBuilder.redirectErrorStream(true); // 표준 에러를 표준 출력으로 리다이렉션합니다.
+            processBuilder.redirectErrorStream(true);
 
             log.info("커맨드 라인 배치 잡 실행: {}", String.join(" ", command));
 
             Process process = processBuilder.start();
-
             StringBuilder output = new StringBuilder();
 
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -191,29 +203,57 @@ public class BatchJobService {
                 }
             }
 
-            int exitCode = process.waitFor(); // 프로세스가 종료될 때까지 대기
-            log.info("외부 배치 잡 실행 완료. 종료 코드: {}", exitCode);
+            int exitCode = process.waitFor();
+            log.info("외부 배치 잡 실행 완료. runId: {}, 종료 코드: {}", runId, exitCode);
+
+            saveLogFileAndUpdateDb(runId, output.toString());
 
             if (exitCode != 0) {
-                log.error("외부 배치 잡 실행 실패. 출력 내용:\n{}", output.toString());
-                // 실패 시, 실행 결과(output)의 일부를 메시지에 포함할 수도 있습니다.
-                throw new BusinessException(ErrorCode.BATCH_JOB_FAILED,
-                        "외부 배치 잡 실행 실패. 종료 코드: " + exitCode);
+                log.error("외부 배치 잡 실행 실패. runId: {}, 출력 내용:\n{}", runId, output.toString());
+                throw new BusinessException(ErrorCode.BATCH_JOB_FAILED, "외부 배치 잡 실행 실패. 종료 코드: " + exitCode);
             }
-
-            // output.toString().trim(); // 수집된 출력 반환
 
         } catch (IOException e) {
             log.error("외부 배치 잡 실행 중 IOException 발생: {}", e.getMessage(), e);
             throw new BusinessException(ErrorCode.BATCH_JOB_FAILED, "외부 배치 잡 시작 또는 결과 읽기 실패: " + e.getMessage());
         } catch (InterruptedException e) {
             log.error("외부 배치 잡 실행 중 InterruptedException 발생: {}", e.getMessage(), e);
-            Thread.currentThread().interrupt(); // 현재 스레드의 인터럽트 상태를 복원
+            Thread.currentThread().interrupt();
             throw new BusinessException(ErrorCode.BATCH_JOB_FAILED, "외부 배치 잡 실행이 중단되었습니다: " + e.getMessage());
-        } catch (Exception e) { // 예상치 못한 다른 모든 예외 처리
-            log.error("외부 배치 잡 실행 중 예상치 못한 오류 발생: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "외부 배치 잡 실행 중 예상치 못한 오류: " + e.getMessage());
         }
+    }
+
+    private void saveLogFileAndUpdateDb(String runId, String logContent) {
+        Path logFilePath = null;
+        try {
+            Path logDirPath = Paths.get(logDirectory);
+            if (!Files.exists(logDirPath)) {
+                Files.createDirectories(logDirPath);
+            }
+
+            // 로그 파일 저장
+            String logFileName = runId + ".log";
+            logFilePath = logDirPath.resolve(logFileName);
+            Files.writeString(logFilePath, logContent);
+            log.info("배치 로그 파일 저장 완료: {}", logFilePath.toAbsolutePath());
+
+        } catch (IOException e) {
+            log.error("로그 파일 저장 실패: {}", logFilePath, e);
+
+        }
+
+        // DB에 로그 경로 업데이트
+        final Path finalLogFilePath = logFilePath;
+        BatchJobLog batchJobLog = batchJobLogRepository.findByRunId(runId)
+                .orElseThrow(() -> {
+                    log.error("runId not found: {}", runId);
+                    return new BusinessException(ErrorCode.ENTITY_NOT_FOUND);
+                });
+
+        batchJobLog.updateLogFilePath(finalLogFilePath.toAbsolutePath().toString()); // 엔티티에 경로 업데이트 메소드 필요
+        batchJobLogRepository.save(batchJobLog);
+        log.info("DB에 로그 파일 경로 업데이트 완료. runId: {}", runId);
+
     }
 
     private String serializeParams(Map<String, Object> params) {
@@ -224,47 +264,4 @@ public class BatchJobService {
             throw new BusinessException(ErrorCode.TYPE_MISMATCH);
         }
     }
-
-    private Map<String, Object> deserializeParams(String json) {
-        try {
-            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
-        } catch (Exception e) {
-            log.error("파라미터 역직렬화 실패: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.TYPE_MISMATCH);
-        }
-    }
-//
-//    private JobParameters createJobParameters(BatchJobMeta batchJobMeta, String userName) {
-//        JobParametersBuilder builder = new JobParametersBuilder()
-//                .addLong("timestamp", System.currentTimeMillis());
-//
-//        builder.addLong("metaId", batchJobMeta.getId());
-//        builder.addString("executedBy", userName);
-//
-//        Map<String, Object> params = deserializeParams(batchJobMeta.getJobParameters());
-//        if (params != null) {
-//            params.forEach((key, value) -> {
-//                if (value instanceof String) {
-//                    builder.addString(key, (String) value);
-//                } else if (value instanceof Long) {
-//                    builder.addLong(key, (Long) value);
-//                } else if (value instanceof Integer) {
-//                    builder.addLong(key, ((Integer) value).longValue());
-//                } else if (value instanceof Double) {
-//                    builder.addDouble(key, (Double) value);
-//                } else if (value instanceof Boolean) {
-//                    builder.addString(key, value.toString());
-//                } else {
-//                    try {
-//                        builder.addString(key, objectMapper.writeValueAsString(value));
-//                    } catch (Exception e) {
-//                        log.error("파라미터 변환 실패: {}", e.getMessage(), e);
-//                        throw new BusinessException(ErrorCode.TYPE_MISMATCH);
-//                    }
-//                }
-//            });
-//        }
-//
-//        return builder.toJobParameters();
-//    }
 }

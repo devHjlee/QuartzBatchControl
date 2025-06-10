@@ -39,3 +39,9 @@ spring:
 jwt:
   secret: batch-control-jwt-secret-key-256-bits-long-1234567890abcdefghijklmnopqrstuvwxyz
   token-validity-in-seconds: 12000
+
+batch:
+  log:
+    directory: batch-logs
+  jar:
+    path: externaljob/latest

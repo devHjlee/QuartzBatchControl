@@ -16,7 +16,16 @@ public class BatchJobExecutionListener implements JobExecutionListener {
 
     @Override
     public void beforeJob(JobExecution jobExecution) {
-        batchJobLogService.startLog(jobExecution);
+        String runId = jobExecution.getJobParameters().getString("run.id");
+        jobExecution.getJobParameters().getParameters().forEach((k, v) -> {
+            log.info("parameter {} = {}", k, v.getValue());
+        });
+        if (runId == null) {
+            log.error("JobParameter에 'run.id'가 존재하지 않습니다. 외부 시스템에 의한 실행이 아닐 수 있습니다.");
+            // 혹은 이 실행을 실패처리하고 싶다면 예외를 던질 수 있습니다.
+            // throw new IllegalArgumentException("'run.id' is required in JobParameters.");
+        }
+        batchJobLogService.startLog(jobExecution, runId);
     }
 
     @Override
