@@ -186,7 +186,7 @@ public class BatchJobService {
             command.add("--job.name=" + batchJobMeta.getJobName());
             command.add("metaId=" + batchJobMeta.getId());
             command.add("executedBy=" + userName);
-            command.add("run.id=" + runId);
+            command.add("runId=" + runId);
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             processBuilder.redirectErrorStream(true);

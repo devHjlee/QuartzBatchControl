@@ -24,7 +24,7 @@ public class BatchJobLogService {
     @Transactional
     public void startLog(JobExecution jobExecution, String runId) {
         try {
-            Long metaId = Long.valueOf(Objects.requireNonNull(jobExecution.getJobParameters().getString("metaId")));
+            Long metaId = jobExecution.getJobParameters().getLong("metaId");
             String executedBy = jobExecution.getJobParameters().getString("executedBy");
             // 시작 시점에 로그 생성
             BatchJobLog log = BatchJobLog.builder()

@@ -16,7 +16,7 @@ public class BatchJobExecutionListener implements JobExecutionListener {
 
     @Override
     public void beforeJob(JobExecution jobExecution) {
-        String runId = jobExecution.getJobParameters().getString("run.id");
+        String runId = jobExecution.getJobParameters().getString("runId");
         jobExecution.getJobParameters().getParameters().forEach((k, v) -> {
             log.info("parameter {} = {}", k, v.getValue());
         });

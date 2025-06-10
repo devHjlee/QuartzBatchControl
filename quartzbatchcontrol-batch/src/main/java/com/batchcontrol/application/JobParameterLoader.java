@@ -21,6 +21,7 @@ public class JobParameterLoader {
     private final ObjectMapper objectMapper;
 
     public JobParameters buildJobParameters(JobParameters originalParams) throws JsonProcessingException {
+        log.info("buildJobParameters: {}",originalParams.toString());
         Long metaId = Long.parseLong(originalParams.getString("metaId"));
 
         BatchJobMeta meta = metaRepository.findById(metaId)
@@ -31,6 +32,7 @@ public class JobParameterLoader {
 
         JobParametersBuilder builder = new JobParametersBuilder();
         builder.addLong("metaId", metaId);
+        builder.addString("runId", originalParams.getString("runId"));
         builder.addString("executedBy", originalParams.getString("executedBy"));
 
         // 저장된 파라미터를 반복문으로 설정
@@ -45,7 +47,7 @@ public class JobParameterLoader {
                 builder.addString(key, value.toString());
             }
         });
-
+        log.info(builder.toString());
         return builder.toJobParameters();
     }
 }
