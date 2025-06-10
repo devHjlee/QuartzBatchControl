@@ -8,7 +8,13 @@ CREATE TABLE batch_job_meta (
                                 created_at DATETIME NOT NULL,
                                 updated_by VARCHAR(100) NOT NULL,
                                 updated_at DATETIME NOT NULL
-);
+) ENGINE=InnoDB;
+
+CREATE TABLE batch_job_catalog (
+                                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                   job_name VARCHAR(255) NOT NULL,
+                                   deleted BOOLEAN NOT NULL DEFAULT FALSE
+) ENGINE=InnoDB;
 
 CREATE TABLE batch_job_execution_log (
                                id BIGINT AUTO_INCREMENT PRIMARY KEY,

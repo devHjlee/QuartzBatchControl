@@ -5,15 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quartzbatchcontrol.batch.api.request.BatchJobMetaRequest;
 import com.quartzbatchcontrol.batch.api.response.BatchJobMetaResponse;
 import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
+import com.quartzbatchcontrol.batch.infrastructure.BatchJobCatalogRepository;
 import com.quartzbatchcontrol.batch.infrastructure.BatchJobMetaRepository;
 
 import com.quartzbatchcontrol.global.exception.BusinessException;
 import com.quartzbatchcontrol.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.*;
-import org.springframework.batch.core.configuration.JobRegistry;
-import org.springframework.batch.core.launch.NoSuchJobException;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -37,8 +36,8 @@ import com.quartzbatchcontrol.batch.api.response.BatchJobMetaSummaryResponse;
 @RequiredArgsConstructor
 public class BatchJobService {
 
-    private final JobRegistry jobRegistry;
     private final BatchJobMetaRepository batchJobMetaRepository;
+    private final BatchJobCatalogRepository batchJobCatalogRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
@@ -83,7 +82,8 @@ public class BatchJobService {
     }
 
     public List<String> getAvailableBatchJobs() {
-        return jobRegistry.getJobNames().stream()
+        return batchJobCatalogRepository.findJobNameByDeletedFalse()
+                .stream()
                 .sorted()
                 .toList();
     }
@@ -101,9 +101,10 @@ public class BatchJobService {
         if (batchJobMetaRepository.existsByJobNameAndMetaName(request.getJobName(), request.getMetaName())) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL); //todo 코드추가필요
         }
-        if (!isValidJob(request.getJobName())) {
-            throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);
-        }
+
+        batchJobCatalogRepository
+                .findBatchJobCatalogByJobNameAndDeletedFalse(request.getJobName())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_JOB_CLASS));
 
         try {
             batchJobMetaRepository.save(BatchJobMeta.builder()
@@ -128,9 +129,9 @@ public class BatchJobService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         // 작업 존재 여부 검증
-        if (!isValidJob(batchJobMeta.getJobName())) {
-            throw new BusinessException(ErrorCode.INVALID_JOB_CLASS);
-        }
+        batchJobCatalogRepository
+                .findBatchJobCatalogByJobNameAndDeletedFalse(request.getJobName())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_JOB_CLASS));
 
         try {
             String serializedParams = request.getJobParameters() != null ?
@@ -155,7 +156,6 @@ public class BatchJobService {
         BatchJobMeta batchJobMeta = batchJobMetaRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
-
         // TODO: 이 경로는 실제 환경에 맞게 설정하거나 외부 설정(application.properties 등)에서 읽어오도록 변경
         String batchJarPath = "externaljob/latest";
 
@@ -166,13 +166,6 @@ public class BatchJobService {
         }
 
         try {
-            if (!checkExternalJobExists(batchJarPath, batchJobMeta.getJobName())) {
-                log.error("외부 배치 JAR '{}' 내에 잡 '{}'을(를) 찾을 수 없습니다.", batchJarPath, batchJobMeta.getJobName());
-
-                throw new BusinessException(ErrorCode.INVALID_JOB_CLASS,
-                        "외부 배치 JAR '" + batchJarPath + "' 내에 잡 '" + batchJobMeta.getJobName() + "'을(를) 찾을 수 없습니다.");
-            }
-
 
             List<String> command = new ArrayList<>();
             command.add("java");
@@ -223,43 +216,6 @@ public class BatchJobService {
         }
     }
 
-
-    private boolean checkExternalJobExists(String jarPath, String jobName) throws IOException, InterruptedException {
-        List<String> command = new ArrayList<>();
-        command.add("java");
-        command.add("-jar");
-        command.add(jarPath);
-        command.add("--validate-job=" + jobName); // 외부 배치에 추가한 검증 옵션
-
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectErrorStream(true); // 에러 스트림도 같이 확인
-        log.info("외부 배치 잡 존재 여부 확인 실행: {}", String.join(" ", command));
-
-        Process process = processBuilder.start();
-        
-        StringBuilder output = new StringBuilder();
-        // try-with-resources 구문을 사용하여 BufferedReader 자동 종료
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append(System.lineSeparator());
-            }
-        }
-        
-        int exitCode = process.waitFor();
-        log.info("외부 배치 잡 존재 여부 확인 완료. 종료 코드: {}. 출력: {}", exitCode, output.toString().trim());
-        return exitCode == 0; // 종료 코드가 0이면 잡이 존재함
-    }
-
-    private boolean isValidJob(String jobName) {
-        try {
-            jobRegistry.getJob(jobName);
-            return true;
-        } catch (NoSuchJobException e) {
-            throw new BusinessException(ErrorCode.INVALID_JOB_CLASS, e);
-        }
-    }
-
     private String serializeParams(Map<String, Object> params) {
         try {
             return objectMapper.writeValueAsString(params);
@@ -277,38 +233,38 @@ public class BatchJobService {
             throw new BusinessException(ErrorCode.TYPE_MISMATCH);
         }
     }
-
-    private JobParameters createJobParameters(BatchJobMeta batchJobMeta, String userName) {
-        JobParametersBuilder builder = new JobParametersBuilder()
-                .addLong("timestamp", System.currentTimeMillis());
-
-        builder.addLong("metaId", batchJobMeta.getId());
-        builder.addString("executedBy", userName);
-
-        Map<String, Object> params = deserializeParams(batchJobMeta.getJobParameters());
-        if (params != null) {
-            params.forEach((key, value) -> {
-                if (value instanceof String) {
-                    builder.addString(key, (String) value);
-                } else if (value instanceof Long) {
-                    builder.addLong(key, (Long) value);
-                } else if (value instanceof Integer) {
-                    builder.addLong(key, ((Integer) value).longValue());
-                } else if (value instanceof Double) {
-                    builder.addDouble(key, (Double) value);
-                } else if (value instanceof Boolean) {
-                    builder.addString(key, value.toString());
-                } else {
-                    try {
-                        builder.addString(key, objectMapper.writeValueAsString(value));
-                    } catch (Exception e) {
-                        log.error("파라미터 변환 실패: {}", e.getMessage(), e);
-                        throw new BusinessException(ErrorCode.TYPE_MISMATCH);
-                    }
-                }
-            });
-        }
-
-        return builder.toJobParameters();
-    }
+//
+//    private JobParameters createJobParameters(BatchJobMeta batchJobMeta, String userName) {
+//        JobParametersBuilder builder = new JobParametersBuilder()
+//                .addLong("timestamp", System.currentTimeMillis());
+//
+//        builder.addLong("metaId", batchJobMeta.getId());
+//        builder.addString("executedBy", userName);
+//
+//        Map<String, Object> params = deserializeParams(batchJobMeta.getJobParameters());
+//        if (params != null) {
+//            params.forEach((key, value) -> {
+//                if (value instanceof String) {
+//                    builder.addString(key, (String) value);
+//                } else if (value instanceof Long) {
+//                    builder.addLong(key, (Long) value);
+//                } else if (value instanceof Integer) {
+//                    builder.addLong(key, ((Integer) value).longValue());
+//                } else if (value instanceof Double) {
+//                    builder.addDouble(key, (Double) value);
+//                } else if (value instanceof Boolean) {
+//                    builder.addString(key, value.toString());
+//                } else {
+//                    try {
+//                        builder.addString(key, objectMapper.writeValueAsString(value));
+//                    } catch (Exception e) {
+//                        log.error("파라미터 변환 실패: {}", e.getMessage(), e);
+//                        throw new BusinessException(ErrorCode.TYPE_MISMATCH);
+//                    }
+//                }
+//            });
+//        }
+//
+//        return builder.toJobParameters();
+//    }
 }
