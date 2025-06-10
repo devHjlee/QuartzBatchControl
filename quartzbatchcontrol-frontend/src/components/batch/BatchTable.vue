@@ -10,19 +10,18 @@
         <div class="table-responsive">
           <table id="batchMetaTable" class="table table-bordered" width="100%" cellspacing="0">
             <thead>
-              <tr>
-                <th class="center-text">Batch Job</th>
-                <th class="center-text">Batch Source</th>
-                <th class="center-text">Meta Name</th>
-                <th class="center-text">Description</th>
-                <th class="center-text">Parameters</th>
-                <th class="center-text">Quartz 연동</th>
-                <th class="center-text">Created By</th>
-                <th class="center-text">Action</th>
-              </tr>
+            <tr>
+              <th class="center-text">Batch Job</th>
+              <th class="center-text">Meta Name</th>
+              <th class="center-text">Description</th>
+              <th class="center-text">Parameters</th>
+              <th class="center-text">Quartz 연동</th>
+              <th class="center-text">Created By</th>
+              <th class="center-text">Action</th>
+            </tr>
             </thead>
             <tbody>
-              <!-- DataTables will populate this section -->
+            <!-- DataTables will populate this section -->
             </tbody>
           </table>
         </div>
@@ -41,25 +40,15 @@
           </div>
           <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
             <div class="mb-3">
-              <label class="form-label">Batch Source</label>
-              <select class="form-control" v-model="batchJobForm.batchSource" @change="handleBatchSourceChange" :disabled="!!currentJobIdForModal">
-                <option value="INTERNAL">INTERNAL</option>
-                <option value="EXTERNAL">EXTERNAL</option>
-              </select>
-            </div>
-            <div class="mb-3">
               <label class="form-label">Batch Job</label>
-              <template v-if="batchJobForm.batchSource === 'INTERNAL'">
-                <select class="form-control" v-model="batchJobForm.jobName" :disabled="isLoadingAvailableJobs || currentJobIdForModal">
+              <template v-if="!currentJobIdForModal">
+                <select class="form-control" v-model="batchJobForm.jobName" :disabled="isLoadingAvailableJobs">
                   <option value="" disabled>{{ isLoadingAvailableJobs ? '로딩 중...' : '배치 작업을 선택하세요' }}</option>
                   <option v-for="jobName in availableBatchJobs" :key="jobName" :value="jobName">{{ jobName }}</option>
                 </select>
                 <div v-if="isLoadingAvailableJobs" class="spinner-border spinner-border-sm text-primary mt-2" role="status">
                   <span class="visually-hidden">Loading...</span>
                 </div>
-              </template>
-              <template v-else-if="batchJobForm.batchSource === 'EXTERNAL'">
-                <input type="text" class="form-control" v-model="batchJobForm.jobName" placeholder="Batch Job 이름 입력" :readonly="currentJobIdForModal && batchJobForm.batchSource === 'INTERNAL'">
               </template>
               <template v-else>
                 <input type="text" class="form-control" v-model="batchJobForm.jobName" placeholder="Batch Job 입력" readonly>
@@ -80,76 +69,76 @@
 
             <table class="table table-bordered">
               <thead>
-                <tr>
-                  <th>Key</th>
-                  <th>Type</th>
-                  <th>Value</th>
-                  <th>Action</th>
-                </tr>
+              <tr>
+                <th>Key</th>
+                <th>Type</th>
+                <th>Value</th>
+                <th>Action</th>
+              </tr>
               </thead>
               <tbody>
-                <tr v-if="isNewParameter">
-                  <td>
-                    <input type="text" class="form-control" v-model="newParameterKey" placeholder="키 입력" />
-                  </td>
-                  <td>
-                    <select class="form-control" v-model="newParameterType">
-                      <option value="String">String</option>
-                      <option value="Number">Number</option>
-                      <option value="Boolean">Boolean</option>
+              <tr v-if="isNewParameter">
+                <td>
+                  <input type="text" class="form-control" v-model="newParameterKey" placeholder="키 입력" />
+                </td>
+                <td>
+                  <select class="form-control" v-model="newParameterType">
+                    <option value="String">String</option>
+                    <option value="Number">Number</option>
+                    <option value="Boolean">Boolean</option>
+                  </select>
+                </td>
+                <td>
+                  <template v-if="newParameterType === 'Boolean'">
+                    <select class="form-control" v-model="newParameterValue">
+                      <option value="true">true</option>
+                      <option value="false">false</option>
                     </select>
-                  </td>
-                  <td>
-                    <template v-if="newParameterType === 'Boolean'">
-                      <select class="form-control" v-model="newParameterValue">
-                        <option value="true">true</option>
-                        <option value="false">false</option>
-                      </select>
-                    </template>
-                    <input
-                      v-else
-                      type="text"
-                      class="form-control"
-                      v-model="newParameterValue"
-                      placeholder="값 입력"
-                    />
-                  </td>
-                  <td>
-                    <button class="btn btn-sm btn-success me-1" @click="confirmAddParameter">확인</button>
-                    <button class="btn btn-sm btn-secondary" @click="cancelAddParameter">취소</button>
-                  </td>
-                </tr>
-                <tr v-for="(value, key) in parsedParameters" :key="key">
-                  <td>{{ key }}</td>
-                  <td>
-                    <select class="form-control" v-model="parameterTypes[key]" @change="updateParameterType(key)">
-                      <option value="String">String</option>
-                      <option value="Number">Number</option>
-                      <option value="Boolean">Boolean</option>
+                  </template>
+                  <input
+                    v-else
+                    type="text"
+                    class="form-control"
+                    v-model="newParameterValue"
+                    placeholder="값 입력"
+                  />
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-success me-1" @click="confirmAddParameter">확인</button>
+                  <button class="btn btn-sm btn-secondary" @click="cancelAddParameter">취소</button>
+                </td>
+              </tr>
+              <tr v-for="(value, key) in parsedParameters" :key="key">
+                <td>{{ key }}</td>
+                <td>
+                  <select class="form-control" v-model="parameterTypes[key]" @change="updateParameterType(key)">
+                    <option value="String">String</option>
+                    <option value="Number">Number</option>
+                    <option value="Boolean">Boolean</option>
+                  </select>
+                </td>
+                <td>
+                  <template v-if="parameterTypes[key] === 'Boolean'">
+                    <select class="form-control" :value="value" @change="updateParameterValue(key, $event)">
+                      <option value="true">true</option>
+                      <option value="false">false</option>
                     </select>
-                  </td>
-                  <td>
-                    <template v-if="parameterTypes[key] === 'Boolean'">
-                      <select class="form-control" :value="value" @change="updateParameterValue(key, $event)">
-                        <option value="true">true</option>
-                        <option value="false">false</option>
-                      </select>
-                    </template>
-                    <input
-                      v-else
-                      type="text"
-                      class="form-control"
-                      :value="value"
-                      @input="updateParameterValue(key, $event)"
-                    />
-                  </td>
-                  <td>
-                    <button class="btn btn-sm btn-danger" @click="handleDeleteParameter(key)">삭제</button>
-                  </td>
-                </tr>
-                <tr v-if="!parsedParameters || Object.keys(parsedParameters).length === 0">
-                  <td colspan="4" class="text-center">파라미터가 없습니다.</td>
-                </tr>
+                  </template>
+                  <input
+                    v-else
+                    type="text"
+                    class="form-control"
+                    :value="value"
+                    @input="updateParameterValue(key, $event)"
+                  />
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-danger" @click="handleDeleteParameter(key)">삭제</button>
+                </td>
+              </tr>
+              <tr v-if="!parsedParameters || Object.keys(parsedParameters).length === 0">
+                <td colspan="4" class="text-center">파라미터가 없습니다.</td>
+              </tr>
               </tbody>
             </table>
           </div>
@@ -173,7 +162,6 @@ import { useRouter } from 'vue-router'
 
 interface BatchJobMeta {
   id: number
-  batchSource: string
   jobName: string
   metaName: string
   jobDescription: string
@@ -195,7 +183,6 @@ interface BatchJobForm {
   jobName: string
   metaName: string
   jobDescription: string
-  batchSource: string
 }
 
 const batchJobs = ref<BatchJobMeta[]>([])
@@ -218,8 +205,7 @@ const parsedParameters = ref<Record<string, any>>({})
 const batchJobForm = ref<BatchJobForm>({
   jobName: '',
   metaName: '',
-  jobDescription: '',
-  batchSource: 'INTERNAL'
+  jobDescription: ''
 })
 
 const searchInputValue = ref(''); // To store search input
@@ -291,27 +277,26 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
             keyword: searchInputValue.value,
           }
         })
-        .then(function (response) {
-          const backendPayload = response.data.data;
-          if (backendPayload && backendPayload.page && Array.isArray(backendPayload.content)) {
-            batchJobs.value = backendPayload.content;
-            callback({
-              draw: dtParams.draw,
-              recordsTotal: backendPayload.page.totalElements,
-              recordsFiltered: backendPayload.page.totalElements,
-              data: backendPayload.content
-            });
-          } else {
+          .then(function (response) {
+            const backendPayload = response.data.data;
+            if (backendPayload && backendPayload.page && Array.isArray(backendPayload.content)) {
+              batchJobs.value = backendPayload.content;
+              callback({
+                draw: dtParams.draw,
+                recordsTotal: backendPayload.page.totalElements,
+                recordsFiltered: backendPayload.page.totalElements,
+                data: backendPayload.content
+              });
+            } else {
+              callback({ draw: dtParams.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
+            }
+          })
+          .catch(function () {
             callback({ draw: dtParams.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
-          }
-        })
-        .catch(function () {
-          callback({ draw: dtParams.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
-        });
+          });
       },
       columns: [
         { data: 'jobName' },
-        { data: 'batchSource'},
         { data: 'metaName' },
         { data: 'jobDescription', defaultContent: '-' },
         { data: 'jobParameterSize', className: 'text-center' },
@@ -391,7 +376,7 @@ const handleEdit = async (jobId: number) => {
   showParametersModal.value = true;
   isLoadingParameters.value = true;
 
-  batchJobForm.value = { jobName: '', metaName: '', jobDescription: '', batchSource: 'INTERNAL' };
+  batchJobForm.value = { jobName: '', metaName: '', jobDescription: '' };
   parsedParameters.value = {};
   parameterTypes.value = {};
   isNewParameter.value = false;
@@ -404,8 +389,7 @@ const handleEdit = async (jobId: number) => {
       batchJobForm.value = {
         jobName: jobDetails.jobName,
         metaName: jobDetails.metaName,
-        jobDescription: jobDetails.jobDescription,
-        batchSource: jobDetails.batchSource || 'INTERNAL'
+        jobDescription: jobDetails.jobDescription
       };
 
       if (jobDetails.jobParameters) {
@@ -422,10 +406,6 @@ const handleEdit = async (jobId: number) => {
           alert('파라미터 정보를 파싱하는데 실패했습니다.');
         }
       }
-
-      if (batchJobForm.value.batchSource === 'INTERNAL') {
-        await loadAvailableInternalJobs();
-      }
     } else {
       alert(response.data?.message || '배치 상세 정보를 불러오는데 실패했습니다.');
       closeParametersModal();
@@ -441,12 +421,31 @@ const handleEdit = async (jobId: number) => {
 
 const handleAddNew = async () => {
   currentJobIdForModal.value = null;
-  batchJobForm.value = { jobName: '', metaName: '', jobDescription: '', batchSource: 'INTERNAL' };
+  batchJobForm.value = { jobName: '', metaName: '', jobDescription: '' };
   parsedParameters.value = {};
   parameterTypes.value = {};
   isNewParameter.value = false;
 
-  await loadAvailableInternalJobs();
+  isLoadingAvailableJobs.value = true;
+  availableBatchJobs.value = [];
+
+  try {
+    const response = await axios.get('/batch/available');
+    if (response.data && response.data.success && Array.isArray(response.data.data)) {
+      availableBatchJobs.value = response.data.data;
+      if (availableBatchJobs.value.length > 0) {
+        // batchJobForm.value.jobName = availableBatchJobs.value[0];
+      }
+    } else {
+      console.error('Failed to load available batch jobs or malformed response:', response.data);
+      alert('사용 가능한 배치 작업 목록을 불러오는데 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('Error fetching available batch jobs:', error);
+    alert('사용 가능한 배치 작업 목록 조회 중 오류가 발생했습니다.');
+  } finally {
+    isLoadingAvailableJobs.value = false;
+  }
 
   showParametersModal.value = true;
 }
@@ -646,34 +645,6 @@ onMounted(() => {
     }
   });
 });
-
-const loadAvailableInternalJobs = async () => {
-  isLoadingAvailableJobs.value = true;
-  availableBatchJobs.value = [];
-  try {
-    const response = await axios.get('/batch/available');
-    if (response.data && response.data.success && Array.isArray(response.data.data)) {
-      availableBatchJobs.value = response.data.data;
-    } else {
-      console.error('Failed to load available batch jobs or malformed response:', response.data);
-      // alert('사용 가능한 배치 작업 목록을 불러오는데 실패했습니다.'); // 중복 알림 방지
-    }
-  } catch (error) {
-    console.error('Error fetching available batch jobs:', error);
-    // alert('사용 가능한 배치 작업 목록 조회 중 오류가 발생했습니다.'); // 중복 알림 방지
-  } finally {
-    isLoadingAvailableJobs.value = false;
-  }
-};
-
-const handleBatchSourceChange = async () => {
-  batchJobForm.value.jobName = '';
-  if (batchJobForm.value.batchSource === 'INTERNAL') {
-    await loadAvailableInternalJobs();
-  } else {
-    availableBatchJobs.value = [];
-  }
-};
 </script>
 
 <style scoped>
@@ -757,21 +728,21 @@ const handleBatchSourceChange = async () => {
 }
 
 .btn-circle.btn-sm {
-    width: 2rem;
-    height: 2rem;
-    padding: 0.5rem 0;
-    border-radius: 1rem;
-    font-size: .75rem;
-    line-height: 1.4;
+  width: 2rem;
+  height: 2rem;
+  padding: 0.5rem 0;
+  border-radius: 1rem;
+  font-size: .75rem;
+  line-height: 1.4;
 }
 .btn-info.btn-circle {
-    background-color: #17a2b8; /* Bootstrap info color */
-    border-color: #17a2b8;
-    color: white;
+  background-color: #17a2b8; /* Bootstrap info color */
+  border-color: #17a2b8;
+  color: white;
 }
 .btn-info.btn-circle:hover {
-    background-color: #138496;
-    border-color: #117a8b;
+  background-color: #138496;
+  border-color: #117a8b;
 }
 
 /* 모달 스타일 추가 */
