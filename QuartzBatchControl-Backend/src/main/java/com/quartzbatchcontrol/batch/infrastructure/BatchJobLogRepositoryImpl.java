@@ -34,6 +34,7 @@ public class BatchJobLogRepositoryImpl implements BatchJobLogRepositoryCustom{
                 .select(Projections.constructor(
                         BatchLogResponse.class,
                         batchJobLog.id,
+                        batchJobLog.runId,
                         batchJobLog.jobExecutionId,
                         batchJobLog.jobName,
                         batchJobMeta.id,
@@ -43,6 +44,7 @@ public class BatchJobLogRepositoryImpl implements BatchJobLogRepositoryCustom{
                         batchJobLog.status,
                         batchJobLog.exitCode,
                         batchJobLog.exitMessage,
+                        batchJobLog.filePath,
                         batchJobLog.jobParameters
                 ))
                 .from(batchJobLog)

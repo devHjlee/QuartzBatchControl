@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class BatchLogResponse {
     private Long id;
+    private String runId;
     private Long jobExecutionId;
     private String jobName;
     private Long metaId;
@@ -20,5 +21,6 @@ public class BatchLogResponse {
     private String status;
     private String exitCode;
     private String exitMessage;
+    private String filePath;
     private String jobParameters;
 }
