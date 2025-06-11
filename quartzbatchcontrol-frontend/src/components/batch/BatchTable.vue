@@ -10,18 +10,18 @@
         <div class="table-responsive">
           <table id="batchMetaTable" class="table table-bordered" width="100%" cellspacing="0">
             <thead>
-              <tr>
-                <th class="center-text">Batch Job</th>
-                <th class="center-text">Meta Name</th>
-                <th class="center-text">Description</th>
-                <th class="center-text">Parameters</th>
-                <th class="center-text">Quartz 연동</th>
-                <th class="center-text">Created By</th>
-                <th class="center-text">Action</th>
-              </tr>
+            <tr>
+              <th class="center-text">Batch Job</th>
+              <th class="center-text">Meta Name</th>
+              <th class="center-text">Description</th>
+              <th class="center-text">Parameters</th>
+              <th class="center-text">Quartz 연동</th>
+              <th class="center-text">Created By</th>
+              <th class="center-text">Action</th>
+            </tr>
             </thead>
             <tbody>
-              <!-- DataTables will populate this section -->
+            <!-- DataTables will populate this section -->
             </tbody>
           </table>
         </div>
@@ -69,76 +69,76 @@
 
             <table class="table table-bordered">
               <thead>
-                <tr>
-                  <th>Key</th>
-                  <th>Type</th>
-                  <th>Value</th>
-                  <th>Action</th>
-                </tr>
+              <tr>
+                <th>Key</th>
+                <th>Type</th>
+                <th>Value</th>
+                <th>Action</th>
+              </tr>
               </thead>
               <tbody>
-                <tr v-if="isNewParameter">
-                  <td>
-                    <input type="text" class="form-control" v-model="newParameterKey" placeholder="키 입력" />
-                  </td>
-                  <td>
-                    <select class="form-control" v-model="newParameterType">
-                      <option value="String">String</option>
-                      <option value="Number">Number</option>
-                      <option value="Boolean">Boolean</option>
+              <tr v-if="isNewParameter">
+                <td>
+                  <input type="text" class="form-control" v-model="newParameterKey" placeholder="키 입력" />
+                </td>
+                <td>
+                  <select class="form-control" v-model="newParameterType">
+                    <option value="String">String</option>
+                    <option value="Number">Number</option>
+                    <option value="Boolean">Boolean</option>
+                  </select>
+                </td>
+                <td>
+                  <template v-if="newParameterType === 'Boolean'">
+                    <select class="form-control" v-model="newParameterValue">
+                      <option value="true">true</option>
+                      <option value="false">false</option>
                     </select>
-                  </td>
-                  <td>
-                    <template v-if="newParameterType === 'Boolean'">
-                      <select class="form-control" v-model="newParameterValue">
-                        <option value="true">true</option>
-                        <option value="false">false</option>
-                      </select>
-                    </template>
-                    <input
-                      v-else
-                      type="text"
-                      class="form-control"
-                      v-model="newParameterValue"
-                      placeholder="값 입력"
-                    />
-                  </td>
-                  <td>
-                    <button class="btn btn-sm btn-success me-1" @click="confirmAddParameter">확인</button>
-                    <button class="btn btn-sm btn-secondary" @click="cancelAddParameter">취소</button>
-                  </td>
-                </tr>
-                <tr v-for="(value, key) in parsedParameters" :key="key">
-                  <td>{{ key }}</td>
-                  <td>
-                    <select class="form-control" v-model="parameterTypes[key]" @change="updateParameterType(key)">
-                      <option value="String">String</option>
-                      <option value="Number">Number</option>
-                      <option value="Boolean">Boolean</option>
+                  </template>
+                  <input
+                    v-else
+                    type="text"
+                    class="form-control"
+                    v-model="newParameterValue"
+                    placeholder="값 입력"
+                  />
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-success me-1" @click="confirmAddParameter">확인</button>
+                  <button class="btn btn-sm btn-secondary" @click="cancelAddParameter">취소</button>
+                </td>
+              </tr>
+              <tr v-for="(value, key) in parsedParameters" :key="key">
+                <td>{{ key }}</td>
+                <td>
+                  <select class="form-control" v-model="parameterTypes[key]" @change="updateParameterType(key)">
+                    <option value="String">String</option>
+                    <option value="Number">Number</option>
+                    <option value="Boolean">Boolean</option>
+                  </select>
+                </td>
+                <td>
+                  <template v-if="parameterTypes[key] === 'Boolean'">
+                    <select class="form-control" :value="value" @change="updateParameterValue(key, $event)">
+                      <option value="true">true</option>
+                      <option value="false">false</option>
                     </select>
-                  </td>
-                  <td>
-                    <template v-if="parameterTypes[key] === 'Boolean'">
-                      <select class="form-control" :value="value" @change="updateParameterValue(key, $event)">
-                        <option value="true">true</option>
-                        <option value="false">false</option>
-                      </select>
-                    </template>
-                    <input
-                      v-else
-                      type="text"
-                      class="form-control"
-                      :value="value"
-                      @input="updateParameterValue(key, $event)"
-                    />
-                  </td>
-                  <td>
-                    <button class="btn btn-sm btn-danger" @click="handleDeleteParameter(key)">삭제</button>
-                  </td>
-                </tr>
-                <tr v-if="!parsedParameters || Object.keys(parsedParameters).length === 0">
-                  <td colspan="4" class="text-center">파라미터가 없습니다.</td>
-                </tr>
+                  </template>
+                  <input
+                    v-else
+                    type="text"
+                    class="form-control"
+                    :value="value"
+                    @input="updateParameterValue(key, $event)"
+                  />
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-danger" @click="handleDeleteParameter(key)">삭제</button>
+                </td>
+              </tr>
+              <tr v-if="!parsedParameters || Object.keys(parsedParameters).length === 0">
+                <td colspan="4" class="text-center">파라미터가 없습니다.</td>
+              </tr>
               </tbody>
             </table>
           </div>
@@ -277,23 +277,23 @@ const fetchBatchJobs = async (page = 0, size = 10) => {
             keyword: searchInputValue.value,
           }
         })
-        .then(function (response) {
-          const backendPayload = response.data.data;
-          if (backendPayload && backendPayload.page && Array.isArray(backendPayload.content)) {
-            batchJobs.value = backendPayload.content;
-            callback({
-              draw: dtParams.draw,
-              recordsTotal: backendPayload.page.totalElements,
-              recordsFiltered: backendPayload.page.totalElements,
-              data: backendPayload.content
-            });
-          } else {
+          .then(function (response) {
+            const backendPayload = response.data.data;
+            if (backendPayload && backendPayload.page && Array.isArray(backendPayload.content)) {
+              batchJobs.value = backendPayload.content;
+              callback({
+                draw: dtParams.draw,
+                recordsTotal: backendPayload.page.totalElements,
+                recordsFiltered: backendPayload.page.totalElements,
+                data: backendPayload.content
+              });
+            } else {
+              callback({ draw: dtParams.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
+            }
+          })
+          .catch(function () {
             callback({ draw: dtParams.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
-          }
-        })
-        .catch(function () {
-          callback({ draw: dtParams.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
-        });
+          });
       },
       columns: [
         { data: 'jobName' },
@@ -728,21 +728,21 @@ onMounted(() => {
 }
 
 .btn-circle.btn-sm {
-    width: 2rem;
-    height: 2rem;
-    padding: 0.5rem 0;
-    border-radius: 1rem;
-    font-size: .75rem;
-    line-height: 1.4;
+  width: 2rem;
+  height: 2rem;
+  padding: 0.5rem 0;
+  border-radius: 1rem;
+  font-size: .75rem;
+  line-height: 1.4;
 }
 .btn-info.btn-circle {
-    background-color: #17a2b8; /* Bootstrap info color */
-    border-color: #17a2b8;
-    color: white;
+  background-color: #17a2b8; /* Bootstrap info color */
+  border-color: #17a2b8;
+  color: white;
 }
 .btn-info.btn-circle:hover {
-    background-color: #138496;
-    border-color: #117a8b;
+  background-color: #138496;
+  border-color: #117a8b;
 }
 
 /* 모달 스타일 추가 */

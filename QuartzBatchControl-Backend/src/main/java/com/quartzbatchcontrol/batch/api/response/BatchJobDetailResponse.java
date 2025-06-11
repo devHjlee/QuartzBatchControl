@@ -1,14 +1,10 @@
 package com.quartzbatchcontrol.batch.api.response;
 
 import com.quartzbatchcontrol.batch.domain.BatchJobMeta;
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.util.Map;
-
 
 @Getter
 @NoArgsConstructor
@@ -31,4 +27,4 @@ public class BatchJobDetailResponse {
                 .jobParameters(entity.getJobParameters()) // 엔티티의 문자열 그대로 전달
                 .build();
     }
-} 
+}

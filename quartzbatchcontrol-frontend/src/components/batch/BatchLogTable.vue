@@ -47,6 +47,8 @@ import $ from 'jquery'
 // BatchLogResponse.java 에 맞춘 인터페이스
 interface BatchLogItem {
   id: number;
+  runId: String;
+  filePath: String;
   jobExecutionId: number | null;
   jobName: string;
   metaId: number | null;

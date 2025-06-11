@@ -44,4 +44,4 @@ public class BatchJobMetaSummaryResponse {
         this.updatedAt = updatedAt;
         this.isRegisteredInQuartz = isRegisteredInQuartz;
     }
-} 
+}
