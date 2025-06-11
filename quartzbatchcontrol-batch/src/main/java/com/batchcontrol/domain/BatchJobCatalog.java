@@ -29,4 +29,7 @@ public class BatchJobCatalog {
         this.deleted = deleted;
     }
 
+    public void delete() {
+        this.deleted = true;
+    }
 }

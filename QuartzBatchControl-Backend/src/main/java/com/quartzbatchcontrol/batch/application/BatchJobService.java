@@ -166,7 +166,6 @@ public class BatchJobService {
         }
     }
 
-    @Transactional
     public void executeBatchJob(Long id, String userName) {
         BatchJobMeta batchJobMeta = batchJobMetaRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "BatchJobMeta not found: " + id));
@@ -206,7 +205,7 @@ public class BatchJobService {
             int exitCode = process.waitFor();
             log.info("외부 배치 잡 실행 완료. runId: {}, 종료 코드: {}", runId, exitCode);
 
-            saveLogFileAndUpdateDb(runId, output.toString());
+            this.saveLogFileAndUpdateDb(runId, output.toString());
 
             if (exitCode != 0) {
                 log.error("외부 배치 잡 실행 실패. runId: {}, 출력 내용:\n{}", runId, output.toString());
@@ -223,7 +222,8 @@ public class BatchJobService {
         }
     }
 
-    private void saveLogFileAndUpdateDb(String runId, String logContent) {
+    @Transactional
+    public void saveLogFileAndUpdateDb(String runId, String logContent) {
         Path logFilePath = null;
         try {
             Path logDirPath = Paths.get(logDirectory);

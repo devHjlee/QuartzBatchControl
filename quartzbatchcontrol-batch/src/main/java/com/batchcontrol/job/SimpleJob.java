@@ -43,8 +43,8 @@ public class SimpleJob {
                 .tasklet((contribution, chunkContext) -> {
                     log.info(">>>>> [STEP 1] param1: {}, param2: {}", param1, param2);
                     Thread.sleep(5000);
-                    //throw new RuntimeException("00");
-                    return RepeatStatus.FINISHED;
+                    throw new RuntimeException("00");
+                    // return RepeatStatus.FINISHED;
                 }, transactionManager)
                 .build();
     }
