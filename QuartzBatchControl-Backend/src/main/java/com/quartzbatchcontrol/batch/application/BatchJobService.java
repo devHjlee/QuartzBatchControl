@@ -170,7 +170,7 @@ public class BatchJobService {
         BatchJobMeta batchJobMeta = batchJobMetaRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "BatchJobMeta not found: " + id));
 
-        File jarFile = new File(batchJarPath);
+        File jarFile = new File(batchJarPath); // TODO: 서버 구성에 맞게 디렉토리 변경 필요
         if (!jarFile.exists() || !jarFile.canRead()) {
             throw new BusinessException(ErrorCode.BATCH_JOB_FAILED, "JAR 링크가 깨졌거나 대상 파일이 없습니다.");
         }
@@ -226,13 +226,12 @@ public class BatchJobService {
     public void saveLogFileAndUpdateDb(String runId, String logContent) {
         Path logFilePath = null;
         try {
-            Path logDirPath = Paths.get(logDirectory);
+            Path logDirPath = Paths.get(logDirectory); // TODO: 다중 서버일 경우 외부저장소로 변경
             if (!Files.exists(logDirPath)) {
                 Files.createDirectories(logDirPath);
             }
 
             // 로그 파일 저장
-            // TODO: 다중 서버일 경우 외부저장소로 변경
             String logFileName = runId + ".log";
             logFilePath = logDirPath.resolve(logFileName);
             Files.writeString(logFilePath, logContent);

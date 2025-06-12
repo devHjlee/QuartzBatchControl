@@ -1,122 +1,162 @@
 # QuartzBatchControl
 
-## 프로젝트 소개
-QuartzBatchControl은 Spring Batch와 Quartz Scheduler를 통합하여 관리하는 웹 기반 배치 작업 관리 시스템입니다. 
-배치 작업의 등록, 수정, 실행 및 모니터링을 제공하며, Quartz Scheduler를 통해 일반 작업과 배치 작업의 스케줄링을 관리합니다.
+Spring Batch와 Quartz Scheduler를 통합 관리하는 웹 기반 배치 작업 관리 시스템
 
-## 화면 구성
-### 대시보드
-![대시보드 화면](docs/images/dashboard.png)
+![대시보드 대표 이미지](docs/images/dashboard.png)
 
-- 작업 현황 카드
-  - 배치 작업 통계
-  - Quartz 작업 통계
-- 실행 결과 차트
-  - 당일 배치 작업 성공/실패 비율
-  - 당일 Quartz 작업 성공/실패 비율
 
-### 배치 관리
-![배치 관리 화면](docs/images/batch-management1.png)
+---
 
-- 작업 목록 테이블
-  - 검색 필터
-  - 작업 등록/수정/실행 버튼
+## 소개
 
-![배치 수정 화면](docs/images/batch-management2.png)
-- 작업 등록/수정 폼
-  - 작업 선택 (batch.job 패키지 기반)
-  - 파라미터 관리
+**QuartzBatchControl**은 Spring Batch와 Quartz Scheduler를 통합하여  
+운영자가 스케줄 기반 혹은 수동으로 배치잡을 관리해야 하는 상황에서,
+웹 UI로 편리하게 작업을 수행하고 실행 이력을 확인할 수 있도록 설계된 **실시간 통합 배치 관리 시스템**입니다.
+운영 효율성을 높이고, 로그와 상태 추적을 구조화함으로써 배치 운영의 안정성과 가시성을 제공합니다.  
+### 참고: 본 프로젝트는 코드 제공을 목적으로 하며, 실제 운영 환경에서는 각 조직의 CI/CD 환경, 다중 서버 구조, **로그 저장 방식(S3 등)**에 맞게 구성 및 확장하여 사용해야 합니다.
 
-### 배치 로그
-![배치 로그 화면](docs/images/batch-log.png)
+---
 
-- 로그 목록 테이블
-  - 검색 필터
-  - 상세 정보 조회
+## Release
 
-### Quartz 관리
-![Quartz 관리 화면](docs/images/quartz-management1.png)
+### 2.0.0 (최신) : 배치 프로젝트(quartzbatchcontrol-batch)는 메인 백엔드와 완전히 분리되어 외부 JAR 실행 구조로 변경되었습니다.
+- **아키텍처 분리**: 기존 백엔드(Spring Boot) 프로젝트에서 스프링 배치 코드를 완전히 분리하여, 별도의 `quartzbatchcontrol-batch` 프로젝트로 관리
+- **외부 배치 실행**: 백엔드에서는 커맨드라인을 통해 외부 배치 JAR을 실행하는 구조로 변경
+- **배치 JAR 관리**: 배치 프로젝트는 jar로 빌드하여 특정 경로에 위치시키고, 백엔드에서 설정파일의 경로를 변경 (설정된 디렉토리 변경 필요)
+```bash
+# 외부 배치 프로젝트 빌드
+# GitHub Actions 기준: JAR 빌드 및 EC2 배포, 최신 심볼릭 링크 갱신
+- name: Build batch jar
+  run: |
+    cd quartzbatchcontrol-batch
+    ./gradlew clean bootJar
 
-- 작업 목록 테이블
-  - 검색 필터
-  - 작업 등록/수정/실행/일시정지/재개/삭제 버튼
+- name: Copy jar to EC2
+  uses: appleboy/scp-action@v0.1.4
+  with:
+    host: ${{ secrets.EC2_HOST }}
+    username: ec2-user
+    key: ${{ secrets.EC2_SSH_KEY }}
+    source: "quartzbatchcontrol-batch/build/libs/*.jar"
+    target: "/home/ec2-user/externaljob"
 
-![Quartz 수정 화면](docs/images/quartz-management2.png)
-- 작업 등록/수정 폼
-  - 작업 타입 선택
-  - 작업/배치 작업 선택
-  - 크론 표현식 설정
+- name: Update latest symlink
+  uses: appleboy/ssh-action@v0.1.10
+  with:
+    script: |
+      cd /home/ec2-user/externaljob
+      ln -sf $(ls -t *.jar | head -n 1) latest
+```
+- **로그 관리 강화**: 배치 프로젝트에 로그 관리를 위한 리스너(BatchJobExecutionListener)가 기본 설정되어 있어, 배치 실행 시 로그가 자동으로 관리됨 (다중서버일 경우 외부 저장소 필요)
+- **확장성**: 새로운 배치 잡은 `quartzbatchcontrol-batch` 프로젝트에 생성하고 BatchJobExecutionListener 추가
 
-### Quartz 로그
-![Quartz 로그 화면](docs/images/quartz-log.png)
+### 1.0.0
+- **내장형 배치**: 쿼츠배치 백엔드(Spring Boot) 프로젝트 내에서 가벼운 스프링 배치 잡을 직접 구현
+- **직접 실행**: 백엔드 프로젝트에 등록된 배치 잡을 직접 수행하는 구조
+- **단일 프로젝트**: 배치와 스케줄러가 한 프로젝트 내에 통합되어 있음
 
-- 로그 목록 테이블
-  - 검색 필터
-  - 상세 정보 조회
+---
 
 ## 주요 기능
+
+- **대시보드**: 배치/Quartz 작업 현황 및 성공/실패 통계 시각화
+- **배치 관리**: 배치 작업 등록, 수정, 즉시 실행, 파라미터 관리
+- **배치 로그**: 실행 이력, 파라미터, 상태, 상세 로그 확인
+- **Quartz 관리**: Quartz 작업 등록, 수정, 스케줄 관리, 상태 변경(일시정지/재개/삭제)
+- **Quartz 로그**: Quartz 작업 실행 이력 및 상세 로그 확인
+- **검색/필터**: 다양한 조건으로 작업 및 로그 검색
+- **실시간 모니터링**: 작업 상태 및 결과를 실시간으로 확인
+
+---
+
+## 빠른 시작
+
+### 요구사항
+- JDK 17 이상
+- Node.js 16 이상
+- MySQL 8.0 이상
+
+### 설치 및 실행
+1. Backend 서버를 먼저 실행
+2. Frontend 실행 (http://localhost:Port)
+3. 외부 배치 JAR은 별도 실행 필요 시 수행
+
+#### Batch (2.0.0 Release)
+```bash
+git clone [repository-url]
+cd quartzBatchControl-batch
+./gradlew build
+java -jar quartzbatchcontrol-batch-0.0.1-SNAPSHOT.jar --spring.profiles.active=sync-only  (등록된 배치잡 목록을 DB 등록)
+```
+
+#### Backend
+```bash
+git clone [repository-url]
+cd QuartzBatchControl-Backend
+./gradlew build
+./gradlew bootRun
+```
+
+#### Frontend
+```bash
+cd quartzbatchcontrol-frontend
+npm install
+npm run dev
+```
+
+---
+
+## 스크린샷
+
 ### 대시보드
-- 등록된 Spring Batch 작업 현황
-  - 전체 배치 작업 수
-  - Quartz와 연동된 배치 작업 수
-  - Quartz 작업 전체 수
-  - 작업 상태별 현황
-- 당일 작업 실행 결과 통계
-  - 배치 작업 성공/실패 현황 (파이 차트)
-  - Quartz 작업 성공/실패 현황 (파이 차트)
+![대시보드](docs/images/dashboard.png)
 
 ### 배치 관리
-- 배치 작업 검색
-- 배치 작업 등록
-  - batch.job 패키지의 기존 배치 작업 기반 등록
-  - 작업 메타데이터 관리
-- 배치 작업 수정
-  - 작업 파라미터 관리 (추가/삭제/변경)
-- 배치 작업 즉시 실행
-  - 저장된 작업 파라미터 기반 실행
+![배치 관리](docs/images/batch-management1.png)
+![배치 수정](docs/images/batch-management2.png)
 
 ### 배치 로그
-- 작업 실행 이력 조회
-  - 성공/실패 상태
-  - 실행 파라미터
-  - 실행자 정보
-  - 시작/종료 시간
+![배치 로그](docs/images/batch-log.png)
+### 배치 상세 로그 (2.0.0 Release)
+![배치 상세 로그](docs/images/batch-log-detail.png)
 
 ### Quartz 관리
-- Quartz 작업 검색
-- Quartz 작업 등록
-  - SIMPLE 타입: quartz.job 패키지의 작업 기반 등록
-  - BATCH 타입: batch_job_meta의 작업 선택하여 등록
-- 작업 상태 관리
-  - 즉시 실행
-  - 일시 정지
-  - 재개
-  - 삭제
-- 작업 수정
-  - 크론 표현식 변경
+![Quartz 관리](docs/images/quartz-management1.png)
+![Quartz 수정](docs/images/quartz-management2.png)
 
 ### Quartz 로그
-- 작업 실행 이력 조회
-  - 작업 이름
-  - 작업 그룹
-  - 작업 타입
-  - 실행 결과
+![Quartz 로그](docs/images/quartz-log.png)
+
+---
 
 ## 기술 스택
-### Backend
-- Spring Boot
-- Spring Batch
-- Quartz Scheduler
-- Spring Security
-- Spring Data JPA
-- QueryDSL
-- MySQL
 
-### Frontend
-- Vue.js
-- Bootstrap Admin 2
-- Axios
-- Vuex
+- **Backend**: Spring Boot, Spring Batch, Quartz Scheduler, Spring Security, Spring Data JPA, QueryDSL, MySQL
+- **Frontend**: Vue.js 3, Bootstrap Admin 2, Axios, Pinia, Vite
+- **기타**: Swagger(OpenAPI), ESLint, Prettier
+
+---
+
+## 폴더 구조
+
+```text
+QuartzBatchControl/
+├── batch-logs/                   # quartzBatchControl-batch 로그폴더
+├── externaljob                   # quartzBatchControl-batch Jar 폴더
+│   ├── latest                    # 최신 quartzBatchControl-batch.jar 의 심볼릭링크
+├── QuartzBatchControl-Backend/   # Spring Boot 백엔드
+├── quartzBatchControl-batch/     # Batch 백엔드 (2.0.0 Release)
+├── quartzbatchcontrol-frontend/  # Vue.js 프론트엔드
+│   ├── src/
+│   │   ├── components/
+│   │   ├── api/
+│   │   └── ...
+│   ├── public/
+│   └── ...
+└── docs/
+```
+
+---
 
 ## 시스템 아키텍처
 ### 데이터베이스 구조
@@ -129,6 +169,7 @@ erDiagram
     QUARTZ_JOB_META ||--o{ QUARTZ_JOB_LOG : "generates"
     QRTZ_JOB_DETAILS ||--|| QRTZ_TRIGGERS : "has"
     QUARTZ_JOB_META ||--|| QRTZ_JOB_DETAILS : "maps to"
+    BATCH_JOB_CATALOG }o--|| BATCH_JOB_META : "maps by job_name (logical)"
 ```
 
 ### 통합 작업 관리 플로우
@@ -171,100 +212,43 @@ flowchart LR
 
 ### 테이블 관계
 1. **BatchJobMeta (배치 작업 메타데이터)**
-   - 배치 작업의 기본 정보 관리
-   - 작업 파라미터 저장
-   - QuartzJobMeta와 1:N 관계
+  - 배치 작업의 기본 정보 관리
+  - 작업 파라미터 저장
+  - QuartzJobMeta와 1:N 관계
 
 2. **QuartzJobMeta (Quartz 작업 메타데이터)**
-   - Quartz 작업의 기본 정보 관리
-   - BatchJobMeta와 N:1 관계
-   - 작업 타입 (SIMPLE/BATCH) 구분
-   - QRTZ_JOB_DETAILS와 1:1 관계
+  - Quartz 작업의 기본 정보 관리
+  - BatchJobMeta와 N:1 관계
+  - 작업 타입 (SIMPLE/BATCH) 구분
+  - QRTZ_JOB_DETAILS와 1:1 관계
 
 3. **BatchJobLog (배치 작업 로그)**
-   - 배치 작업 실행 이력
-   - BatchJobMeta와 N:1 관계
+  - 배치 작업 실행 이력
+  - BatchJobMeta와 N:1 관계
 
 4. **QuartzJobLog (Quartz 작업 로그)**
-   - Quartz 작업 실행 이력
-   - QuartzJobMeta와 N:1 관계
+  - Quartz 작업 실행 이력
+  - QuartzJobMeta와 N:1 관계
 
 5. **QRTZ_JOB_DETAILS (Quartz 작업 상세)**
-   - Quartz 작업 상세 정보
-   - QRTZ_TRIGGERS와 1:1 관계
-   - QuartzJobMeta와 1:1 관계
+  - Quartz 작업 상세 정보
+  - QRTZ_TRIGGERS와 1:1 관계
+  - QuartzJobMeta와 1:1 관계
 
+---
 
 ## API 문서
-Springdoc OpenAPI (Swagger)를 통해 API 문서를 확인할 수 있습니다. 애플리케이션 실행 후, 웹 브라우저에서 `/swagger-ui.html` 경로로 접속하세요.
 
-### 대시보드 API (`/api/dashboard`)
-- GET `/batchCount` - Batch Job 통계 조회
-- GET `/batchLogCount` - Batch Log 통계 조회
-- GET `/quartzCount` - Quartz 작업 통계 조회
-- GET `/quartzLogCount` - Quartz 로그 통계 조회
+- Swagger(OpenAPI) 제공  
+  백엔드 서버 실행 후 [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) 접속
 
-### 배치 작업 API (`/api/batch`)
-- GET `/` - 배치 Job 메타데이터 목록 조회 (페이지네이션)
-- GET `/{metaId}` - 배치 Job 상세 조회
-- GET `/available` - 사용 가능한 배치 Job 목록 조회
-- GET `/all` - 모든 배치 Job 메TA데이터 조회 (리스트)
-- POST `/` - 배치 Job 등록
-- PUT `/` - 배치 Job 수정
-- POST `/execute/{metaId}` - 배치 Job 실행
+### 주요 엔드포인트 예시
 
-### 배치 로그 API (`/api/batch-log`)
-- GET `/` - 배치 Log 목록 조회
+- `/api/dashboard` : 대시보드 통계
+- `/api/batch` : 배치 작업 관리
+- `/api/batch-log` : 배치 로그
+- `/api/quartz-jobs` : Quartz 작업 관리
+- `/api/quartz-log` : Quartz 로그
+- `/api/auth` : 인증/회원가입
 
-### Quartz 작업 API (`/api/quartz-jobs`)
-- GET `/` - Quartz Job 메타데이터 목록 조회 (페이지네이션)
-- GET `/preview-schedule` - CRON 표현식 다음 실행 시간 미리보기
-- POST `/` - Quartz Job 생성
-- POST `/update` - Quartz Job 수정
-- GET `/delete/{metaId}` - Quartz Job 삭제
-- GET `/pause/{metaId}` - Quartz Job 일시정지
-- GET `/resume/{metaId}` - Quartz Job 재개
-- GET `/trigger/{metaId}` - Quartz Job 즉시 실행
-
-### Quartz 로그 API (`/api/quartz-log`)
-- GET `/` - Quartz Log 목록 조회
-
-### 사용자 인증 API (`/api/auth`)
-- POST `/signup` - 회원가입
-- POST `/login` - 로그인
-
-## 설치 및 실행
-### 요구사항
-- JDK 17 이상
-- Node.js 16 이상
-- MySQL 8.0 이상
-
-### Backend 설정
-```bash
-# 프로젝트 클론
-git clone [repository-url]
-
-# 디렉토리 이동
-cd QuartzBatchControl-Backend
-
-# 의존성 설치
-./gradlew build
-
-# 애플리케이션 실행
-./gradlew bootRun
-```
-
-### Frontend 설정
-```bash
-# 디렉토리 이동
-cd quartzbatchcontrol-frontend
-
-# 의존성 설치
-npm install
-
-# 개발 서버 실행
-npm run serve
-
-# 프로덕션 빌드
-npm run build
-```
+---
