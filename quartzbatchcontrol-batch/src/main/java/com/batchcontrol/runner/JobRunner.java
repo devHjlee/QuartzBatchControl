@@ -9,12 +9,14 @@ import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.converter.DefaultJobParametersConverter;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.Properties;
 
 @Slf4j
 @Component
+@Profile("!sync-only")
 @RequiredArgsConstructor
 public class JobRunner implements CommandLineRunner {
 

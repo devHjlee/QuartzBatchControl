@@ -232,6 +232,7 @@ public class BatchJobService {
             }
 
             // 로그 파일 저장
+            // TODO: 다중 서버일 경우 외부저장소로 변경
             String logFileName = runId + ".log";
             logFilePath = logDirPath.resolve(logFileName);
             Files.writeString(logFilePath, logContent);

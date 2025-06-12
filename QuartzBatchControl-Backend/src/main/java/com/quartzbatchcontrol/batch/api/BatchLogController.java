@@ -19,6 +19,7 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,5 +43,19 @@ public class BatchLogController {
             Pageable pageable) {
         Page<BatchLogResponse> contents = batchJobLogService.getAllBatchLogs(request, pageable);
         return ResponseEntity.ok(ApiResponse.success(new PagedModel<>(contents), "Batch 로그 조회를 완료했습니다."));
+    }
+
+    @Operation(summary = "배치 로그 파일 내용 조회", description = "runId에 해당하는 로그 파일의 전체 내용을 조회합니다.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(mediaType = "text/plain")),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "로그를 찾을 수 없음")
+    })
+    @GetMapping("/{runId}/content")
+    public ResponseEntity<String> getLogContent(@PathVariable String runId) {
+        String logContent = batchJobLogService.getLogContentByRunId(runId);
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/plain; charset=utf-8")
+                .body(logContent);
     }
 }
