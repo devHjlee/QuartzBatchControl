@@ -114,7 +114,7 @@ public class BatchJobService {
     @Transactional
     public void saveBatchJob(BatchJobMetaRequest request, String userName) {
         if (batchJobMetaRepository.existsByJobNameAndMetaName(request.getJobName(), request.getMetaName())) {
-            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL); //todo 코드추가필요
+            throw new BusinessException(ErrorCode.DUPLICATE_BATCH_JOB);
         }
 
         batchJobCatalogRepository
@@ -232,6 +232,7 @@ public class BatchJobService {
             }
 
             // 로그 파일 저장
+            // TODO: 다중 서버일 경우 외부저장소로 변경
             String logFileName = runId + ".log";
             logFilePath = logDirPath.resolve(logFileName);
             Files.writeString(logFilePath, logContent);

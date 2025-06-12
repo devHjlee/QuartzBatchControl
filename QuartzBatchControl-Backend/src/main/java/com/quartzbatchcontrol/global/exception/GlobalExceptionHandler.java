@@ -37,8 +37,17 @@ public class GlobalExceptionHandler {
                 e.getErrorCode().name(),
                 e.getMessage(),
                 e);
-        return ResponseEntity.status(e.getErrorCode().getHttpStatus())
-                .body(ApiResponse.error(e.getErrorCode()));
+
+        String customMessage = e.getMessage();
+        String defaultMessage = e.getErrorCode().getMessage();
+
+        if (!customMessage.equals(defaultMessage)) {
+            return ResponseEntity.status(e.getErrorCode().getHttpStatus())
+                    .body(ApiResponse.error(e.getErrorCode(), customMessage));
+        } else {
+            return ResponseEntity.status(e.getErrorCode().getHttpStatus())
+                    .body(ApiResponse.error(e.getErrorCode()));
+        }
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

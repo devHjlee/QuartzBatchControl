@@ -32,22 +32,43 @@
       </div>
     </div>
 
-    <!-- Batch Job Modal REMOVED -->
+    <!-- Log Viewer Modal -->
+    <div class="modal fade" id="logViewerModal" tabindex="-1" aria-labelledby="logViewerModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="logViewerModalLabel">배치 실행 로그</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <pre v-html="styledLogContent"></pre>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">닫기</button>
+            <button type="button" class="btn btn-primary" @click="downloadLog">다운로드</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </div>
   <!-- /.container-fluid -->
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, nextTick } from 'vue'
+import { onMounted, ref, nextTick, computed } from 'vue'
 import axios from '@/api/axios'
 import $ from 'jquery'
+import 'datatables.net-bs4'; // Import DataTables with Bootstrap 4 styling
+import * as bootstrap from 'bootstrap'; // Import bootstrap for modal control
 // import { useRouter } from 'vue-router' // No longer needed for navigation from this table
 
 // BatchLogResponse.java 에 맞춘 인터페이스
 interface BatchLogItem {
   id: number;
-  runId: String;
+  runId: string; // runId는 string입니다.
   filePath: String;
   jobExecutionId: number | null;
   jobName: string;
@@ -78,6 +99,29 @@ const dataTable = ref<any>(null)
 
 const searchKeyword = ref('')
 const searchStatus = ref('') // Status 검색을 위한 ref
+
+// --- 모달 관련 상태 ---
+const logContent = ref('');
+const currentLogRunId = ref('');
+let logModal: bootstrap.Modal | null = null;
+
+const styledLogContent = computed(() => {
+  if (!logContent.value) {
+    return '';
+  }
+  return logContent.value
+    .split('\n')
+    .map((line) => {
+      let escapedLine = escapeHtml(line);
+      // Highlight keywords
+      escapedLine = escapedLine.replace(/\b(ERROR)\b/g, '<strong class="log-error">$1</strong>');
+      escapedLine = escapedLine.replace(/\b(WARN|WARNING)\b/g, '<strong class="log-warn">$1</strong>');
+      escapedLine = escapedLine.replace(/\b(INFO)\b/g, '<strong class="log-info">$1</strong>');
+      escapedLine = escapedLine.replace(/\b(DEBUG)\b/g, '<strong class="log-debug">$1</strong>');
+      return escapedLine;
+    })
+    .join('<br />');
+});
 
 const formatTime = (time: string | null): string => {
   if (!time) return '-'
@@ -186,6 +230,17 @@ const fetchBatchLogs = async () => {
         // { data: 'jobParameters', title: 'Parameters', defaultContent: '-' },
         // { data: 'jobExecutionId', title: 'Job Execution ID', defaultContent: '-' },
         // { data: 'metaId', title: 'Meta ID', defaultContent: '-' },
+        // 로그 보기 버튼을 위한 새로운 컬럼 추가
+        {
+            data: 'runId',
+            title: 'Log',
+            className: 'center-text',
+            orderable: false,
+            render: function(data: any, type: any, row: any) {
+                // data-run-id 속성에 runId를 저장하여 이벤트 핸들러에서 사용
+                return `<button class="btn btn-primary btn-sm action-view-log" data-run-id="${data}">보기</button>`;
+            }
+        }
       ],
       initComplete: function() {
         const customSearchContainer = document.getElementById('customSearchContainer');
@@ -225,6 +280,19 @@ const fetchBatchLogs = async () => {
             });
           }
         }
+      },
+      // DataTables가 행을 다시 그릴 때마다 호출
+      drawCallback: function() {
+        // 기존 이벤트 핸들러 제거 (중복 방지)
+        $('#batchLogTable tbody').off('click', 'button.action-view-log');
+        
+        // 새로 그려진 버튼에 이벤트 핸들러 바인딩
+        $('#batchLogTable tbody').on('click', 'button.action-view-log', function() {
+          const runId = $(this).data('run-id');
+          if (runId) {
+            showLog(runId);
+          }
+        });
       }
     });
 
@@ -235,10 +303,44 @@ const fetchBatchLogs = async () => {
   }
 }
 
+// 로그 보기 버튼 클릭 시 실행될 함수
+const showLog = async (runId: string) => {
+  try {
+    logContent.value = '로그를 불러오는 중...';
+    currentLogRunId.value = runId;
+    if(logModal) {
+      logModal.show();
+    }
+    
+    const response = await axios.get(`/batch-log/${runId}/content`);
+    logContent.value = response.data;
+  } catch (error) {
+    console.error('로그 내용을 불러오는데 실패했습니다:', error);
+    logContent.value = '로그를 불러오는데 실패했습니다. 서버 오류를 확인하세요.';
+  }
+};
+
+// 로그 다운로드 함수
+const downloadLog = () => {
+  if (!logContent.value) return;
+  const blob = new Blob([logContent.value], { type: 'text/plain;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `batch-log-${currentLogRunId.value}.log`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+};
+
 // const router = useRouter() // No longer needed
 
 onMounted(() => {
   fetchBatchLogs();
+  const modalElement = document.getElementById('logViewerModal');
+  if (modalElement) {
+    logModal = new bootstrap.Modal(modalElement);
+  }
   // Removed event delegation for 'a.action-view-parameters'
 });
 </script>
@@ -246,6 +348,7 @@ onMounted(() => {
 <style scoped>
 .center-text {
   text-align: center;
+  vertical-align: middle; /* 버튼이 가운데 오도록 */
 }
 
 .table-responsive {
@@ -349,4 +452,29 @@ onMounted(() => {
 
 /* #customSearchContainer .custom-search-button,
 #customSearchContainer .custom-add-button styles might not be needed or can be simplified */
+
+/* 모달의 pre 태그 스타일 */
+.modal-body pre {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  white-space: pre-wrap;   /* 자동 줄바꿈 */
+  word-wrap: break-word;   /* 긴 단어 강제 줄바꿈 */
+}
+
+/* Log level colors */
+:deep(.log-error) {
+  color: #dc3545; /* Bootstrap's danger color */
+}
+:deep(.log-warn) {
+  color: #ffc107; /* Bootstrap's warning color */
+}
+:deep(.log-info) {
+  color: #17a2b8; /* Bootstrap's info color */
+}
+:deep(.log-debug) {
+  color: #6c757d; /* Bootstrap's secondary color */
+}
 </style>
