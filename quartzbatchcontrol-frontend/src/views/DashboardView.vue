@@ -1,37 +1,37 @@
 <template>
   <div class="container-fluid mt-4">
     <!-- Page Heading -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-      <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-    </div>
+<!--    <div class="d-sm-flex align-items-center justify-content-between mb-4">-->
+<!--      <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>-->
+<!--    </div>-->
 
     <!-- Row 1: Batch Counts & Some Quartz Counts -->
     <div class="row">
-      <StatCard 
-        title="Total Batch Jobs" 
-        :value="batchCountData?.batchCount ?? 0" 
-        iconClass="fas fa-cubes" 
+      <StatCard
+        title="Total Batch Jobs"
+        :value="batchCountData?.batchCount ?? 0"
+        iconClass="fas fa-cubes"
         borderColorClass="border-left-primary"
         :isLoading="!batchCountData"
       />
-      <StatCard 
-        title="Quartz Registered (Batch)" 
-        :value="batchCountData?.registeredCount ?? 0" 
-        iconClass="fas fa-link" 
+      <StatCard
+        title="Quartz Registered (Batch)"
+        :value="batchCountData?.registeredCount ?? 0"
+        iconClass="fas fa-link"
         borderColorClass="border-left-success"
         :isLoading="!batchCountData"
       />
-      <StatCard 
-        title="Total Quartz Jobs" 
-        :value="quartzCountData?.quartzCount ?? 0" 
-        iconClass="fas fa-tasks" 
+      <StatCard
+        title="Total Quartz Jobs"
+        :value="quartzCountData?.quartzCount ?? 0"
+        iconClass="fas fa-tasks"
         borderColorClass="border-left-info"
         :isLoading="!quartzCountData"
       />
-      <StatCard 
-        title="Quartz Waiting" 
-        :value="quartzCountData?.waitingCount ?? 0" 
-        iconClass="fas fa-hourglass-half" 
+      <StatCard
+        title="Quartz Waiting"
+        :value="quartzCountData?.waitingCount ?? 0"
+        iconClass="fas fa-hourglass-half"
         borderColorClass="border-left-warning"
         :isLoading="!quartzCountData"
       />
@@ -39,29 +39,29 @@
 
     <!-- Row 2: Remaining Quartz Counts -->
     <div class="row">
-      <StatCard 
-        title="Quartz Acquired" 
-        :value="quartzCountData?.acquiredCount ?? 0" 
-        iconClass="fas fa-play-circle" 
+      <StatCard
+        title="Quartz Acquired"
+        :value="quartzCountData?.acquiredCount ?? 0"
+        iconClass="fas fa-play-circle"
         borderColorClass="border-left-secondary"
         :isLoading="!quartzCountData"
       />
-      <StatCard 
-        title="Quartz Paused" 
-        :value="quartzCountData?.pausedCount ?? 0" 
-        iconClass="fas fa-pause-circle" 
+      <StatCard
+        title="Quartz Paused"
+        :value="quartzCountData?.pausedCount ?? 0"
+        iconClass="fas fa-pause-circle"
         borderColorClass="border-left-danger"
         :isLoading="!quartzCountData"
       />
-      <StatCard 
-        title="Quartz Blocked" 
-        :value="quartzCountData?.blockedCount ?? 0" 
-        iconClass="fas fa-ban" 
+      <StatCard
+        title="Quartz Blocked"
+        :value="quartzCountData?.blockedCount ?? 0"
+        iconClass="fas fa-ban"
         borderColorClass="border-left-dark"
         :isLoading="!quartzCountData"
       />
       <!-- Add an empty card for alignment if needed, or adjust col counts if there are only 3 items -->
-      <div class="col-xl-3 col-md-6 mb-4" v-if="false"></div> 
+      <div class="col-xl-3 col-md-6 mb-4" v-if="false"></div>
     </div>
 
     <!-- Row 3: Log Summaries (Pie Charts) -->
@@ -105,7 +105,7 @@ interface QuartzCountResponse {
 }
 
 interface DailyStatusCountResponse {
-  successCount: number; 
+  successCount: number;
   failureCount: number; // Ensure this matches the backend response field name
 }
 

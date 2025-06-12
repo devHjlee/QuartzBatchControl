@@ -40,6 +40,7 @@ public class BatchJobLogService {
         }
 
         try {
+            // TODO: 외부저장소일 경우 수정 필요
             Path path = Paths.get(batchLog.getFilePath());
             if (!Files.exists(path)) {
                 log.warn("DB에 경로가 있으나 실제 로그 파일을 찾을 수 없습니다: {}", batchLog.getFilePath());

@@ -114,7 +114,7 @@ public class BatchJobService {
     @Transactional
     public void saveBatchJob(BatchJobMetaRequest request, String userName) {
         if (batchJobMetaRepository.existsByJobNameAndMetaName(request.getJobName(), request.getMetaName())) {
-            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL); //todo 코드추가필요
+            throw new BusinessException(ErrorCode.DUPLICATE_BATCH_JOB);
         }
 
         batchJobCatalogRepository

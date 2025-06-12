@@ -37,7 +37,7 @@ public class QuartzJobMetaService {
     @Transactional
     public void saveQuartzJobMeta(QuartzJobRequest request, String userName) {
         if (quartzJobMetaRepository.existsByJobName(request.getJobName())) {
-            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL); //todo 에러코드 변경필요
+            throw new BusinessException(ErrorCode.DUPLICATE_QUARTZ_JOB);
         }
 
         QuartzJobMeta jobMeta = quartzJobMetaRepository.save(QuartzJobMeta.builder()
